@@ -109,3 +109,36 @@ export function createDemoProject(): Project {
     ]
   }
 }
+
+export function createEmptyProject(): Project {
+  return {
+    title: 'Untitled',
+    bpm: 120,
+    bars: 4,
+    loopEnabled: true,
+    tracks: [
+      {
+        id: 'track-synth-1',
+        name: 'Synth 1',
+        type: 'synth',
+        instrumentId: 'soft-sine',
+        colorIndex: 0,
+        volume: 0.8,
+        muted: false,
+        solo: false,
+        notes: []
+      },
+      {
+        id: 'track-rhythm-1',
+        name: 'Rhythm 1',
+        type: 'drum',
+        instrumentId: 'basic-kit',
+        colorIndex: 1,
+        volume: 0.8,
+        muted: false,
+        solo: false,
+        notes: []
+      }
+    ]
+  }
+}

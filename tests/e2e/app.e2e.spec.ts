@@ -118,6 +118,12 @@ test.describe('Tone Bone Electron E2E', () => {
       await win.waitForTimeout(250)
       await win.screenshot({ path: join(ARTIFACT_DIR, 'edit-minimal-dark.png') })
 
+      // 7. Create a new project (accept unsaved confirmation dialog)
+      win.once('dialog', (d) => void d.accept())
+      await win.getByTestId('new-project-btn').click()
+      await expect(win.locator('[data-testid^="track-card-"]')).toHaveCount(2)
+      await expect(win.getByTestId('track-name-track-synth-1')).toHaveText('Synth 1')
+
       expect(pageErrors).toEqual([])
     } finally {
       await electronApp.close()
