@@ -9,16 +9,19 @@ Tone Bone は **「外側の UI・Electron ほど薄く、内側の純粋ドメ�
 ```mermaid
 flowchart TD
     UI["UI Layer (src/renderer/components/)<br/>Transport / TrackList / PianoRoll / Stage / Settings"]
-    App["Application Layer (src/renderer/)<br/>actions.ts / useProjectStore / themeTokens"]
+    App["Application Layer (src/renderer/)<br/>actions.ts / audioContext.ts / useProjectStore / themeTokens"]
     Mod["Pluggable Modules<br/>codecs / audio / visualizers / packs / platform"]
     Core["Domain Core (src/core/) — 外部依存ゼロ<br/>types / musicMath / history / demoProject"]
     OS["Electron Main & Preload<br/>ファイルI/O / パック読込 / 設定永続化"]
 
     UI --> App
+    UI --> Mod
+    UI --> Core
     App --> Mod
     App --> Core
     Mod --> Core
     Mod <--> OS
+    OS --> Core
 ```
 
 ### ディレクトリと責務
@@ -32,7 +35,7 @@ flowchart TD
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
 | `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
 | `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・設定/パック永続化 | `main/index.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
-| `src/renderer/` | 薄い React UI・アプリ操作窓口・状態ストア | `actions.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `components/` |
+| `src/renderer/` | 薄い React UI・アプリ操作窓口・状態ストア | `actions.ts`, `audioContext.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `components/` |
 
 ---
 
@@ -59,15 +62,17 @@ flowchart TD
 ### 保存形式を追加・差し替える（`ProjectCodec`）
 1. `src/codecs/` に `ProjectCodec`（`id`, `label`, `extensions`, `canDecode`, `encode`, `decode`）を実装したクラスを追加します。
 2. `src/codecs/CodecRegistry.ts` の `createDefaultCodecRegistry()` で `registry.register(new MyCodec(), true)` のように登録します（第2引数 `true` でデフォルト保存形式を差し替え可能。旧形式も登録したままなら `decodeAuto()` で自動判別して開けます）。
+   > **現在の制約**：保存時の初期拡張子（`src/renderer/store/useProjectStore.ts`）と Electron のファイル選択ダイアログのフィルタ（`src/main/index.ts`）は現在 `.json` 固定となっています。`.json` 以外の拡張子を使うコーデックを追加する場合は、これらの箇所も併せて更新する必要があります。
 
 ### ビジュアライザー演出を追加する（`VisualizerRenderer`）
 1. `src/visualizers/` に `VisualizerRenderer`（`id`, `name`, `render(ctx, frame, preset)`）を実装します。
-2. `src/visualizers/VisualizerRegistry.ts` に登録し、リソースパックの `visualizer/preset.json` で `"rendererId": "<登録したID>"` を指定すれば切り替えられます。
+2. `src/visualizers/VisualizerRegistry.ts` の `createDefaultVisualizerRegistry()` に登録し、リソースパックの `visualizer/preset.json` で `"rendererId": "<登録したID>"` を指定すれば切り替えられます。
 
 ### 音声書き出し形式を追加する（`AudioExporter`）
-1. `src/audio/exporters/` に `AudioExporter`（`export(project, instruments) => Promise<Uint8Array>`）を実装します。
+1. `src/audio/exporters/` に `AudioExporter`（`id`, `extension`, `export(project, instruments) => Promise<Uint8Array>`）を実装します。
 2. `SynthVoice` / `DrumVoice` は `BaseAudioContext` 対応のため、`OfflineAudioContext` でリアルタイム再生と完全に同じ音色・バランスをオフラインレンダリングできます。
+   > **現在の制約**：`CodecRegistry` のようなレジストリは未導入であり、現状は `src/renderer/audioContext.ts`・`src/renderer/actions.ts`・`src/platform/`・`src/main/index.ts` が `WavExporter` と `.wav` 保存 IPC（`audio:saveWav`）に直接接続されています。別形式を追加する場合はこれらの接続箇所と UI も併せて拡張する必要があります。
 
 ### 設定タブを追加する
 1. `src/renderer/components/settings/` に新しいタブコンポーネントを作成します。
-2. `src/renderer/components/SettingsModal.tsx` の `TABS` 配列とレンダリング分岐に1行追加します。
+2. `src/renderer/components/SettingsModal.tsx` の `SettingsTabId` 型、`TABS` 配列、およびレンダリング分岐に新しいタブを追加します。

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GRID_DIVISIONS, MAX_BARS, type GridDivision } from '@core/types'
 import {
   exportCurrentProjectWav,
@@ -11,12 +11,14 @@ import { NumericInput } from './NumericInput'
 import styles from './TransportBar.module.css'
 
 export function TransportBar() {
+  const title = useProjectStore((s) => s.project.title)
   const bpm = useProjectStore((s) => s.project.bpm)
   const bars = useProjectStore((s) => s.project.bars)
   const loopEnabled = useProjectStore((s) => s.project.loopEnabled)
   const gridDivision = useProjectStore((s) => s.gridDivision)
   const isPlaying = useProjectStore((s) => s.isPlaying)
   const isDirty = useProjectStore((s) => s.isDirty)
+  const setTitle = useProjectStore((s) => s.setTitle)
   const setBpm = useProjectStore((s) => s.setBpm)
   const setBars = useProjectStore((s) => s.setBars)
   const toggleLoop = useProjectStore((s) => s.toggleLoop)
@@ -27,7 +29,22 @@ export function TransportBar() {
   const saveProjectAs = useProjectStore((s) => s.saveProjectAs)
   const openProject = useProjectStore((s) => s.openProject)
 
+  const [draftTitle, setDraftTitle] = useState(title)
   const [exporting, setExporting] = useState(false)
+
+  useEffect(() => {
+    setDraftTitle(title)
+  }, [title])
+
+  const commitTitle = (): void => {
+    const trimmed = draftTitle.trim()
+    if (trimmed.length > 0) {
+      setTitle(trimmed)
+      setDraftTitle(trimmed)
+    } else {
+      setDraftTitle(title)
+    }
+  }
 
   const handleExportWav = async (): Promise<void> => {
     if (exporting) return
@@ -43,6 +60,27 @@ export function TransportBar() {
     <header className={styles.bar} data-testid="transport-bar">
       <div className={styles.group}>
         <span className={styles.brand}>Tone Bone</span>
+        <input
+          type="text"
+          className={styles.titleInput}
+          value={draftTitle}
+          onChange={(e) => setDraftTitle(e.target.value)}
+          onBlur={commitTitle}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitTitle()
+              e.currentTarget.blur()
+            } else if (e.key === 'Escape') {
+              e.stopPropagation()
+              setDraftTitle(title)
+              e.currentTarget.blur()
+            }
+          }}
+          aria-label="曲名"
+          title="曲名を変更"
+          data-testid="project-title-input"
+        />
+        <div className={styles.divider} />
         <button
           type="button"
           className={styles.playBtn}

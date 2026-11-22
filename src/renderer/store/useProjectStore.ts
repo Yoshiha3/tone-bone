@@ -303,7 +303,11 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
       clearStatusMessage: () => set({ statusMessage: null }),
 
-      setTitle: (title) => commit((p) => ({ ...p, title })),
+      setTitle: (title) => {
+        const trimmed = title.trim()
+        if (!trimmed || trimmed === get().project.title) return
+        commit((p) => ({ ...p, title: trimmed }))
+      },
       setBpm: (bpm) => commit((p) => ({ ...p, bpm: clamp(Math.round(bpm), 40, 300) })),
       setBars: (bars) => commit((p) => ({ ...p, bars: clamp(Math.round(bars), 1, MAX_BARS) })),
       toggleLoop: () => commit((p) => ({ ...p, loopEnabled: !p.loopEnabled })),
