@@ -67,8 +67,8 @@ function validateTrack(raw: unknown, index: number): Track {
 
 export class SimpleJsonV1Codec implements ProjectCodec {
   readonly id = 'simple-json-v1'
-  readonly label = 'Tone Bone Project (.tonebone.json)'
-  readonly extensions = ['tonebone.json', 'json'] as const
+  readonly label = 'Tone Bone Project (.json)'
+  readonly extensions = ['json'] as const
 
   canDecode(raw: string): boolean {
     try {

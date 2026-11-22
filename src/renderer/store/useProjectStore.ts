@@ -244,7 +244,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const { project } = get()
         const safeName = (project.title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
         const encoded = deps.codecs.encodeDefault(project)
-        const result = await deps.platform.saveProjectFile(`${safeName}.tonebone.json`, encoded)
+        const result = await deps.platform.saveProjectFile(`${safeName}.json`, encoded)
         if (!result.canceled && result.filePath) {
           set({
             currentFilePath: result.filePath,
