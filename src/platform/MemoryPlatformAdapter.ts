@@ -12,7 +12,8 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     initialPacks: ResourcePack[] = [],
     initialSettings: AppSettings = {
       workspaceDir: '/memory/ToneBone',
-      activePackIds: ['default-minimal']
+      activePackIds: ['default-minimal'],
+      noteLengthMode: 'last-used'
     }
   ) {
     this.packs = initialPacks

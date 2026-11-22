@@ -28,9 +28,11 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(lastAppliedThemeBg).toBe('#16191f')
     expect(store.getState().mergedPacks.instruments.some((i) => i.id === 'glass-bell')).toBe(true)
 
-    // Add a new synth track and place two 1/12 triplet notes
+    // Add a new synth track, rename it, and place two 1/12 triplet notes
     store.getState().addTrack('synth')
     const trackId = store.getState().selectedTrackId
+    store.getState().updateTrack(trackId, { name: 'Lead Triplet' })
+    expect(store.getState().project.tracks.find((t) => t.id === trackId)?.name).toBe('Lead Triplet')
     const tripletStep = getGridTickStep('1/12') // 160 ticks
 
     const n1 = store.getState().addNote(trackId, {
@@ -39,6 +41,9 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
       durationTick: tripletStep,
       velocity: 0.8
     })
+    expect(store.getState().lastNoteDurationTick).toBe(tripletStep)
+    await store.getState().setNoteLengthMode('grid-step')
+    expect(store.getState().settings.noteLengthMode).toBe('grid-step')
     const n2 = store.getState().addNote(trackId, {
       pitch: 64,
       startTick: tripletStep,

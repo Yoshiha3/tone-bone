@@ -88,6 +88,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  cursor: text;
+}
+
+.trackNameInput {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 1px 5px;
+  height: 22px;
 }
 
 .deleteBtn {

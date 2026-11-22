@@ -129,7 +129,10 @@ export interface MergedPackConfig {
   instruments: InstrumentDef[]
 }
 
+export type NoteLengthMode = 'last-used' | 'grid-step'
+
 export interface AppSettings {
   workspaceDir: string
   activePackIds: string[]
+  noteLengthMode: NoteLengthMode
 }

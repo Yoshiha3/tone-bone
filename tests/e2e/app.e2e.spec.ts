@@ -43,10 +43,16 @@ test.describe('Tone Bone Electron E2E', () => {
       await gridSelect.selectOption('1/12')
       await expect(gridSelect).toHaveValue('1/12')
 
-      // 3. Add track & toggle Mute/Solo
+      // 3. Add track, rename via double-click, & toggle Mute/Solo
       const beforeCards = await win.locator('[data-testid^="track-card-"]').count()
       await win.getByTestId('add-synth-track-btn').click()
       await expect(win.locator('[data-testid^="track-card-"]')).toHaveCount(beforeCards + 1)
+
+      await win.getByTestId('track-name-track-melody').dblclick()
+      const renameInput = win.getByTestId('track-name-input-track-melody')
+      await renameInput.fill('Main Lead')
+      await renameInput.press('Enter')
+      await expect(win.getByTestId('track-name-track-melody')).toHaveText('Main Lead')
 
       const melodyMute = win.getByTestId('mute-btn-track-melody')
       await melodyMute.click()
@@ -82,6 +88,12 @@ test.describe('Tone Bone Electron E2E', () => {
       // 6. Open Settings Modal, verify Storage tab, and switch to Minimal Dark resource pack
       await win.getByTestId('settings-btn').click()
       await win.waitForSelector('[data-testid="settings-modal"]')
+
+      await win.getByTestId('tab-editor').click()
+      await win.getByTestId('note-len-grid-step-btn').click()
+      await expect(win.getByTestId('note-len-grid-step-btn')).toHaveText('選択中')
+      await win.getByTestId('note-len-last-used-btn').click()
+      await expect(win.getByTestId('note-len-last-used-btn')).toHaveText('選択中')
 
       await win.getByTestId('tab-storage').click()
       const wsPath = await win.getByTestId('workspace-path').textContent()

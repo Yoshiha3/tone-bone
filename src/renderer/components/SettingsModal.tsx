@@ -2,15 +2,17 @@ import { useState } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import styles from './SettingsModal.module.css'
 
-type Tab = 'packs' | 'storage'
+type Tab = 'packs' | 'editor' | 'storage'
 
 export function SettingsModal() {
   const open = useProjectStore((s) => s.settingsOpen)
   const setSettingsOpen = useProjectStore((s) => s.setSettingsOpen)
   const availablePacks = useProjectStore((s) => s.availablePacks)
   const activePackIds = useProjectStore((s) => s.settings.activePackIds)
+  const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
   const workspaceDir = useProjectStore((s) => s.settings.workspaceDir)
   const setActivePackIds = useProjectStore((s) => s.setActivePackIds)
+  const setNoteLengthMode = useProjectStore((s) => s.setNoteLengthMode)
   const reloadPacks = useProjectStore((s) => s.reloadPacks)
   const chooseWorkspaceDir = useProjectStore((s) => s.chooseWorkspaceDir)
   const openFolder = useProjectStore((s) => s.openFolder)
@@ -66,6 +68,14 @@ export function SettingsModal() {
             data-testid="tab-packs"
           >
             リソースパック
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${tab === 'editor' ? styles.tabActive : ''}`}
+            onClick={() => setTab('editor')}
+            data-testid="tab-editor"
+          >
+            エディタ
           </button>
           <button
             type="button"
@@ -138,6 +148,46 @@ export function SettingsModal() {
               <button type="button" onClick={() => void reloadPacks()}>
                 再読み込み
               </button>
+            </div>
+          </div>
+        ) : tab === 'editor' ? (
+          <div className={styles.body}>
+            <p className={styles.hint}>ピアノロールで新しくノーツを配置するときの初期長さ</p>
+            <div className={styles.packList}>
+              <div
+                className={`${styles.packRow} ${noteLengthMode === 'last-used' ? styles.packRowActive : ''}`}
+              >
+                <div className={styles.packInfo}>
+                  <span className={styles.packName}>直前のノーツの長さを引き継ぐ</span>
+                  <span className={styles.packDesc}>
+                    直前に入力・伸縮・選択したノーツと同じ長さで配置します。
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void setNoteLengthMode('last-used')}
+                  data-testid="note-len-last-used-btn"
+                >
+                  {noteLengthMode === 'last-used' ? '選択中' : '選ぶ'}
+                </button>
+              </div>
+              <div
+                className={`${styles.packRow} ${noteLengthMode === 'grid-step' ? styles.packRowActive : ''}`}
+              >
+                <div className={styles.packInfo}>
+                  <span className={styles.packName}>グリッド幅に合わせる</span>
+                  <span className={styles.packDesc}>
+                    現在選択中のグリッド分割（1/16, 1/12など）と同じ長さで配置します。
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void setNoteLengthMode('grid-step')}
+                  data-testid="note-len-grid-step-btn"
+                >
+                  {noteLengthMode === 'grid-step' ? '選択中' : '選ぶ'}
+                </button>
+              </div>
             </div>
           </div>
         ) : (

@@ -39,7 +39,8 @@ export class SettingsRepository {
   load(): AppSettings {
     const defaults: AppSettings = {
       workspaceDir: this.defaultWorkspaceDir,
-      activePackIds: ['default-minimal']
+      activePackIds: ['default-minimal'],
+      noteLengthMode: 'last-used'
     }
     if (!existsSync(this.settingsFilePath)) {
       ensureWorkspaceDirectories(defaults.workspaceDir)
@@ -56,7 +57,11 @@ export class SettingsRepository {
         activePackIds:
           Array.isArray(parsed.activePackIds) && parsed.activePackIds.length > 0
             ? parsed.activePackIds.filter((x): x is string => typeof x === 'string')
-            : defaults.activePackIds
+            : defaults.activePackIds,
+        noteLengthMode:
+          parsed.noteLengthMode === 'grid-step' || parsed.noteLengthMode === 'last-used'
+            ? parsed.noteLengthMode
+            : defaults.noteLengthMode
       }
       ensureWorkspaceDirectories(settings.workspaceDir)
       return settings
