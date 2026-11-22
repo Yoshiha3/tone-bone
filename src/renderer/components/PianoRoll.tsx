@@ -146,22 +146,23 @@ export function PianoRoll() {
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>): void => {
     if (!track) return
     const { x, y } = getLocalCoords(e)
+    const scrollTop = scrollRef.current?.scrollTop ?? 0
 
-    // Ruler click -> seek playhead
-    if (y < RULER_HEIGHT && x >= KEY_COL_WIDTH) {
+    // Ruler click (sticky at top of scroll viewport) -> seek playhead
+    if (y - scrollTop < RULER_HEIGHT && x >= KEY_COL_WIDTH) {
       const tick = floorTickToGrid(xToTick(x), gridDivision)
       audioEngine.seek(tick)
       return
     }
 
     // Key column click -> preview pitch
-    if (x < KEY_COL_WIDTH && y >= RULER_HEIGHT) {
+    if (x < KEY_COL_WIDTH && y - scrollTop >= RULER_HEIGHT) {
       const pitch = yToPitch(y)
       audioEngine.previewNote(track, pitch)
       return
     }
 
-    if (y < RULER_HEIGHT) return
+    if (y - scrollTop < RULER_HEIGHT) return
 
     const hit = hitTestNote(track.notes, x, y)
 
@@ -465,30 +466,6 @@ export function PianoRoll() {
           ctx.lineTo(phX, canvasHeight)
           ctx.stroke()
 
-          // Top ruler
-          ctx.fillStyle = surface
-          ctx.fillRect(0, 0, canvasWidth, RULER_HEIGHT)
-          ctx.strokeStyle = borderSubtle
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(0, RULER_HEIGHT - 0.5)
-          ctx.lineTo(canvasWidth, RULER_HEIGHT - 0.5)
-          ctx.stroke()
-
-          ctx.fillStyle = textSecondary
-          ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
-          ctx.textBaseline = 'middle'
-          for (let bar = 0; bar < project.bars; bar++) {
-            const x = KEY_COL_WIDTH + bar * TICKS_PER_BAR * pxPerTick
-            ctx.fillText(`${bar + 1}`, x + 6, RULER_HEIGHT / 2)
-          }
-
-          // Playhead cap on ruler
-          ctx.fillStyle = playheadColor
-          ctx.beginPath()
-          ctx.arc(phX, RULER_HEIGHT - 5, 3.5, 0, Math.PI * 2)
-          ctx.fill()
-
           // Left keyboard / drum pad column
           ctx.fillStyle = surface
           ctx.fillRect(0, RULER_HEIGHT, KEY_COL_WIDTH, canvasHeight - RULER_HEIGHT)
@@ -524,6 +501,40 @@ export function PianoRoll() {
             ctx.lineTo(KEY_COL_WIDTH, y + rowHeight)
             ctx.stroke()
           }
+
+          // Sticky top ruler (drawn last so it always stays cleanly on top while scrolling)
+          const rulerY = scrollRef.current?.scrollTop ?? 0
+          ctx.fillStyle = surface
+          ctx.fillRect(0, rulerY, canvasWidth, RULER_HEIGHT)
+          ctx.strokeStyle = borderSubtle
+          ctx.lineWidth = 1
+          ctx.beginPath()
+          ctx.moveTo(0, rulerY + RULER_HEIGHT - 0.5)
+          ctx.lineTo(canvasWidth, rulerY + RULER_HEIGHT - 0.5)
+          ctx.stroke()
+
+          ctx.fillStyle = textSecondary
+          ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
+          ctx.textBaseline = 'middle'
+          for (let bar = 0; bar < project.bars; bar++) {
+            const x = KEY_COL_WIDTH + bar * TICKS_PER_BAR * pxPerTick
+            ctx.fillText(`${bar + 1}`, x + 6, rulerY + RULER_HEIGHT / 2)
+          }
+
+          // Playhead cap on ruler
+          ctx.fillStyle = playheadColor
+          ctx.beginPath()
+          ctx.arc(phX, rulerY + RULER_HEIGHT - 5, 3.5, 0, Math.PI * 2)
+          ctx.fill()
+
+          // Top-left corner cap over keyboard column
+          ctx.fillStyle = surface
+          ctx.fillRect(0, rulerY, KEY_COL_WIDTH - 1, RULER_HEIGHT - 1)
+          ctx.strokeStyle = borderSubtle
+          ctx.beginPath()
+          ctx.moveTo(KEY_COL_WIDTH - 0.5, rulerY)
+          ctx.lineTo(KEY_COL_WIDTH - 0.5, rulerY + RULER_HEIGHT)
+          ctx.stroke()
 
           ctx.restore()
         }
