@@ -90,18 +90,24 @@ test.describe('Tone Bone Electron E2E', () => {
       await win.waitForSelector('[data-testid="settings-modal"]')
 
       await win.getByTestId('tab-editor').click()
+      await expect(win.getByTestId('note-len-last-used-btn')).toHaveAttribute('aria-checked', 'true')
+      await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-editor.png') })
       await win.getByTestId('note-len-grid-step-btn').click()
-      await expect(win.getByTestId('note-len-grid-step-btn')).toHaveText('選択中')
+      await expect(win.getByTestId('note-len-grid-step-btn')).toHaveAttribute('aria-checked', 'true')
       await win.getByTestId('note-len-last-used-btn').click()
-      await expect(win.getByTestId('note-len-last-used-btn')).toHaveText('選択中')
+      await expect(win.getByTestId('note-len-last-used-btn')).toHaveAttribute('aria-checked', 'true')
 
       await win.getByTestId('tab-storage').click()
       const wsPath = await win.getByTestId('workspace-path').textContent()
       expect(wsPath).toContain('ToneBone')
 
       await win.getByTestId('tab-packs').click()
+      await expect(win.getByTestId('pack-toggle-default-minimal')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('pack-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'false')
       await win.getByTestId('pack-toggle-minimal-dark').click()
       await win.waitForTimeout(200)
+      await expect(win.getByTestId('pack-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'true')
+      await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-packs.png') })
 
       const darkBg = await win.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--bg-app').trim()

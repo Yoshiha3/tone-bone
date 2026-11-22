@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import type { AppSettings } from '@core/types'
 
 export interface WorkspacePaths {
@@ -73,6 +73,7 @@ export class SettingsRepository {
 
   save(settings: AppSettings): AppSettings {
     ensureWorkspaceDirectories(settings.workspaceDir)
+    mkdirSync(dirname(this.settingsFilePath), { recursive: true })
     writeFileSync(this.settingsFilePath, JSON.stringify(settings, null, 2) + '\n', 'utf-8')
     return settings
   }
