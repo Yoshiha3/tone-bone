@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import { readFileSync, writeFileSync } from 'fs'
-import { join } from 'path'
+import { mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
 import type { AppSettings } from '@core/types'
 import { loadAllResourcePacks } from './packRepository'
 import { ensureWorkspaceDirectories, getWorkspacePaths, SettingsRepository } from './settingsRepository'
@@ -100,6 +100,12 @@ function registerIpcHandlers(): void {
     }
     writeFileSync(result.filePath, content, 'utf-8')
     return { canceled: false, filePath: result.filePath }
+  })
+
+  ipcMain.handle('project:write', (_event, filePath: string, content: string) => {
+    mkdirSync(dirname(filePath), { recursive: true })
+    writeFileSync(filePath, content, 'utf-8')
+    return { canceled: false, filePath }
   })
 
   ipcMain.handle('project:open', async () => {

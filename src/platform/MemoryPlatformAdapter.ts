@@ -5,6 +5,8 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
   lastSavedProjectContent: string | null = null
   lastSavedProjectPath: string | null = null
   lastSavedWavBytes: Uint8Array | null = null
+  saveDialogCount = 0
+  directWriteCount = 0
   settings: AppSettings
   packs: ResourcePack[]
 
@@ -21,7 +23,15 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
   }
 
   async saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult> {
+    this.saveDialogCount++
     const filePath = `${this.settings.workspaceDir}/projects/${suggestedName}`
+    this.lastSavedProjectPath = filePath
+    this.lastSavedProjectContent = content
+    return { canceled: false, filePath }
+  }
+
+  async writeProjectFile(filePath: string, content: string): Promise<SaveFileResult> {
+    this.directWriteCount++
     this.lastSavedProjectPath = filePath
     this.lastSavedProjectContent = content
     return { canceled: false, filePath }

@@ -19,7 +19,9 @@ export function TransportBar() {
   const setViewMode = useProjectStore((s) => s.setViewMode)
   const setSettingsOpen = useProjectStore((s) => s.setSettingsOpen)
   const saveProject = useProjectStore((s) => s.saveProject)
+  const saveProjectAs = useProjectStore((s) => s.saveProjectAs)
   const openProject = useProjectStore((s) => s.openProject)
+  const isDirty = useProjectStore((s) => s.isDirty)
   const project = useProjectStore((s) => s.project)
   const instruments = useProjectStore((s) => s.mergedPacks.instruments)
 
@@ -139,8 +141,15 @@ export function TransportBar() {
           Stage
         </button>
         <div className={styles.divider} />
-        <button type="button" onClick={() => void saveProject()} data-testid="save-btn">
-          保存
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={(e) => void (e.shiftKey ? saveProjectAs() : saveProject())}
+          title="保存 (Cmd/Ctrl+S) / Shift+クリックで別名保存"
+          data-testid="save-btn"
+        >
+          <span>保存</span>
+          {isDirty && <span className={styles.dirtyDot} aria-label="未保存の変更あり" />}
         </button>
         <button type="button" onClick={() => void openProject()} data-testid="open-btn">
           開く

@@ -4,6 +4,8 @@ import type { AppSettings } from '@core/types'
 contextBridge.exposeInMainWorld('tonebone', {
   saveProjectFile: (suggestedName: string, content: string) =>
     ipcRenderer.invoke('project:save', suggestedName, content),
+  writeProjectFile: (filePath: string, content: string) =>
+    ipcRenderer.invoke('project:write', filePath, content),
   openProjectFile: () => ipcRenderer.invoke('project:open'),
   saveWavFile: (suggestedName: string, data: Uint8Array) =>
     ipcRenderer.invoke('audio:saveWav', suggestedName, data),
