@@ -29,10 +29,15 @@ export function TransportBar() {
 
   const [exporting, setExporting] = useState(false)
   const [bpmText, setBpmText] = useState(String(bpm))
+  const [barsText, setBarsText] = useState(String(bars))
 
   useEffect(() => {
     setBpmText(String(bpm))
   }, [bpm])
+
+  useEffect(() => {
+    setBarsText(String(bars))
+  }, [bars])
 
   const commitBpm = (): void => {
     const trimmed = bpmText.trim()
@@ -46,6 +51,20 @@ export function TransportBar() {
       setBpm(next)
     }
     setBpmText(String(next))
+  }
+
+  const commitBars = (): void => {
+    const trimmed = barsText.trim()
+    const parsed = Number(trimmed)
+    if (trimmed.length === 0 || !Number.isFinite(parsed)) {
+      setBarsText(String(bars))
+      return
+    }
+    const next = clamp(Math.round(parsed), 1, 128)
+    if (next !== bars) {
+      setBars(next)
+    }
+    setBarsText(String(next))
   }
 
   const handleTogglePlay = (): void => {
@@ -143,18 +162,30 @@ export function TransportBar() {
 
         <label className={styles.field}>
           <span>小節</span>
-          <select
-            value={bars}
-            onChange={(e) => setBars(Number(e.target.value))}
-            className={styles.select}
-            data-testid="bars-select"
-          >
-            {[2, 4, 8, 12, 16].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={barsText}
+            onChange={(e) => setBarsText(e.target.value)}
+            onBlur={commitBars}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitBars()
+                e.currentTarget.blur()
+              } else if (e.key === 'Escape') {
+                setBarsText(String(bars))
+                e.currentTarget.blur()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setBars(bars + 1)
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setBars(bars - 1)
+              }
+            }}
+            className={styles.barsInput}
+            data-testid="bars-input"
+          />
         </label>
 
         <label className={styles.field}>
