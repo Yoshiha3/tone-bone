@@ -1,7 +1,7 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import { createDefaultCodecRegistry, type CodecRegistry } from '@codecs/CodecRegistry'
-import { createDemoProject } from '@core/demoProject'
+import { createDemoProject, createEmptyProject } from '@core/demoProject'
 import {
   canRedo,
   canUndo,
@@ -66,6 +66,7 @@ export interface ProjectStoreState {
   saveProject(): Promise<boolean>
   saveProjectAs(): Promise<boolean>
   openProject(): Promise<boolean>
+  newProject(): void
 
   // UI state
   setViewMode(mode: ViewMode): void
@@ -276,6 +277,20 @@ export function createProjectStore(deps: ProjectStoreDeps) {
           })
           return false
         }
+      },
+
+      newProject() {
+        const fresh = createEmptyProject()
+        set({
+          history: createHistory(fresh),
+          project: fresh,
+          selectedTrackId: fresh.tracks[0]?.id ?? '',
+          selectedNoteIds: [],
+          clipboardNotes: [],
+          currentFilePath: null,
+          isDirty: false,
+          statusMessage: '新規プロジェクトを作成しました'
+        })
       },
 
       setViewMode: (viewMode) => set({ viewMode }),

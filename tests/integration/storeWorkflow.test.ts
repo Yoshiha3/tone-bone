@@ -111,5 +111,14 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(freshStore.getState().project).toEqual(expectedSnapshot)
     expect(freshStore.getState().currentFilePath).toBe(platform.lastSavedProjectPath)
     expect(freshStore.getState().isDirty).toBe(false)
+
+    // New project resets tracks, history, currentFilePath, and isDirty
+    freshStore.getState().newProject()
+    expect(freshStore.getState().project.title).toBe('Untitled')
+    expect(freshStore.getState().project.tracks).toHaveLength(2)
+    expect(freshStore.getState().project.tracks.every((t) => t.notes.length === 0)).toBe(true)
+    expect(freshStore.getState().currentFilePath).toBeNull()
+    expect(freshStore.getState().isDirty).toBe(false)
+    expect(freshStore.getState().canUndo()).toBe(false)
   })
 })

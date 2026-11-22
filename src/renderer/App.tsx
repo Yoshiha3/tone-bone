@@ -86,6 +86,18 @@ export function App() {
         return
       }
 
+      if (mod && e.key.toLowerCase() === 'n') {
+        e.preventDefault()
+        if (state.isDirty) {
+          const ok = window.confirm('未保存の変更があります。破棄して新規プロジェクトを作成しますか？')
+          if (!ok) return
+        }
+        audioEngine.stop()
+        state.setIsPlaying(false)
+        state.newProject()
+        return
+      }
+
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault()
         if (e.shiftKey) void state.saveProjectAs()

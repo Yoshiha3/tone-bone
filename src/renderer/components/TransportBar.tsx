@@ -21,6 +21,7 @@ export function TransportBar() {
   const saveProject = useProjectStore((s) => s.saveProject)
   const saveProjectAs = useProjectStore((s) => s.saveProjectAs)
   const openProject = useProjectStore((s) => s.openProject)
+  const newProject = useProjectStore((s) => s.newProject)
   const isDirty = useProjectStore((s) => s.isDirty)
   const project = useProjectStore((s) => s.project)
   const instruments = useProjectStore((s) => s.mergedPacks.instruments)
@@ -40,6 +41,16 @@ export function TransportBar() {
   const handleStop = (): void => {
     audioEngine.stop()
     setIsPlaying(false)
+  }
+
+  const handleNewProject = (): void => {
+    if (isDirty) {
+      const ok = window.confirm('未保存の変更があります。破棄して新規プロジェクトを作成しますか？')
+      if (!ok) return
+    }
+    audioEngine.stop()
+    setIsPlaying(false)
+    newProject()
   }
 
   const handleExportWav = async (): Promise<void> => {
@@ -141,6 +152,14 @@ export function TransportBar() {
           Stage
         </button>
         <div className={styles.divider} />
+        <button
+          type="button"
+          onClick={handleNewProject}
+          title="新規作成 (Cmd/Ctrl+N)"
+          data-testid="new-project-btn"
+        >
+          新規
+        </button>
         <button
           type="button"
           className={styles.saveBtn}
