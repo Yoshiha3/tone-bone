@@ -9,9 +9,9 @@
 }
 
 .modal {
-  width: 540px;
+  width: 560px;
   max-width: 92vw;
-  max-height: 82vh;
+  max-height: 84vh;
   background: var(--bg-surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
@@ -66,12 +66,21 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .hint {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
 }
 
 .packList {
@@ -87,24 +96,62 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   background: var(--bg-surface);
+  transition: border-color 0.12s ease, background-color 0.12s ease, opacity 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .packRowActive {
-  border-color: var(--accent-primary);
+  border-color: var(--border-strong);
   background: var(--bg-surface-alt);
+}
+
+.packRowDraggable {
+  cursor: grab;
+}
+
+.packRowDraggable:active {
+  cursor: grabbing;
+}
+
+.packRowDragging {
+  opacity: 0.45;
+}
+
+.packRowDropTarget {
+  border-color: var(--accent-primary);
+  box-shadow: 0 -2px 0 0 var(--accent-primary);
+}
+
+.packLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dragHandle {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+  padding: 2px 2px;
 }
 
 .packInfo {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .packName {
   font-weight: 600;
   font-size: 13px;
+  color: var(--text-primary);
 }
 
 .packDesc {
@@ -112,10 +159,97 @@
   color: var(--text-secondary);
 }
 
-.packActions {
+/* Apple-style pill toggle switch */
+.switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border-radius: 999px;
+  border: none;
+  background: var(--border-strong);
+  flex-shrink: 0;
+  transition: background-color 0.18s ease;
+}
+
+.switch:hover:not(:disabled) {
+  background: var(--border-strong);
+  border: none;
+}
+
+.switchOn {
+  background: var(--accent-primary);
+}
+
+.switchOn:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.switchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  transition: transform 0.18s ease;
+}
+
+.switchOn .switchThumb {
+  transform: translateX(18px);
+}
+
+/* Selectable checkmark radio cards (Editor tab) */
+.choiceCard {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
+  background: var(--bg-surface);
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.choiceCard:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-surface-alt);
+}
+
+.choiceCardSelected {
+  border-color: var(--accent-primary);
+  background: var(--selection-fill);
+}
+
+.choiceCardSelected:hover {
+  border-color: var(--accent-primary);
+  background: var(--selection-fill);
+}
+
+.checkCircle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: transparent;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.checkCircleSelected {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: var(--accent-contrast);
 }
 
 .pathBox {
