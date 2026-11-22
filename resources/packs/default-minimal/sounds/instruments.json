@@ -1,0 +1,76 @@
+[
+  {
+    "id": "soft-sine",
+    "name": "Soft Sine",
+    "type": "synth",
+    "synth": {
+      "waveform": "sine",
+      "attack": 0.012,
+      "decay": 0.18,
+      "sustain": 0.55,
+      "release": 0.22,
+      "gainScale": 0.9
+    }
+  },
+  {
+    "id": "warm-triangle",
+    "name": "Warm Triangle",
+    "type": "synth",
+    "synth": {
+      "waveform": "triangle",
+      "attack": 0.01,
+      "decay": 0.14,
+      "sustain": 0.65,
+      "release": 0.18,
+      "filterCutoff": 1800,
+      "gainScale": 0.95
+    }
+  },
+  {
+    "id": "chip-square",
+    "name": "Chip Square",
+    "type": "synth",
+    "synth": {
+      "waveform": "square",
+      "attack": 0.005,
+      "decay": 0.1,
+      "sustain": 0.45,
+      "release": 0.1,
+      "filterCutoff": 2600,
+      "gainScale": 0.5
+    }
+  },
+  {
+    "id": "clean-saw",
+    "name": "Clean Saw",
+    "type": "synth",
+    "synth": {
+      "waveform": "sawtooth",
+      "attack": 0.015,
+      "decay": 0.2,
+      "sustain": 0.5,
+      "release": 0.18,
+      "filterCutoff": 2200,
+      "gainScale": 0.55
+    }
+  },
+  {
+    "id": "pluck-synth",
+    "name": "Pluck",
+    "type": "synth",
+    "synth": {
+      "waveform": "triangle",
+      "attack": 0.003,
+      "decay": 0.16,
+      "sustain": 0.08,
+      "release": 0.12,
+      "filterCutoff": 3200,
+      "gainScale": 0.95
+    }
+  },
+  {
+    "id": "basic-kit",
+    "name": "Basic Rhythm Kit",
+    "type": "drum"
+  }
+]

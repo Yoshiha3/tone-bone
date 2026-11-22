@@ -1,0 +1,9 @@
+{
+  "rendererId": "minimal-flow",
+  "background": "#f6f7f9",
+  "waveColor": "#3b6ea5",
+  "gridColor": "#e2e6ed",
+  "noteOpacity": 0.9,
+  "rippleScale": 1.0,
+  "showWaveform": true
+}
