@@ -14,6 +14,7 @@ import {
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
 import {
   DRUM_LANES,
+  MAX_BARS,
   PPQN,
   TICKS_PER_BAR,
   type AppSettings,
@@ -304,7 +305,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
       setTitle: (title) => commit((p) => ({ ...p, title })),
       setBpm: (bpm) => commit((p) => ({ ...p, bpm: clamp(Math.round(bpm), 40, 300) })),
-      setBars: (bars) => commit((p) => ({ ...p, bars: clamp(Math.round(bars), 1, 128) })),
+      setBars: (bars) => commit((p) => ({ ...p, bars: clamp(Math.round(bars), 1, MAX_BARS) })),
       toggleLoop: () => commit((p) => ({ ...p, loopEnabled: !p.loopEnabled })),
 
       addTrack: (type) => {

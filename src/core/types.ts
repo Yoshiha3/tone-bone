@@ -1,6 +1,7 @@
 export const PPQN = 480
 export const BEATS_PER_BAR = 4
 export const TICKS_PER_BAR = PPQN * BEATS_PER_BAR // 1920
+export const MAX_BARS = 999
 
 export type GridDivision = '1/4' | '1/8' | '1/16' | '1/32' | '1/6' | '1/12' | '1/24'
 

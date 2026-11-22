@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { clamp } from '@core/musicMath'
-import { GRID_DIVISIONS, type GridDivision } from '@core/types'
+import { GRID_DIVISIONS, MAX_BARS, type GridDivision } from '@core/types'
 import { audioEngine, wavExporter } from '../audioContext'
 import { defaultPlatform, useProjectStore } from '../store/useProjectStore'
 import styles from './TransportBar.module.css'
@@ -60,7 +60,7 @@ export function TransportBar() {
       setBarsText(String(bars))
       return
     }
-    const next = clamp(Math.round(parsed), 1, 128)
+    const next = clamp(Math.round(parsed), 1, MAX_BARS)
     if (next !== bars) {
       setBars(next)
     }

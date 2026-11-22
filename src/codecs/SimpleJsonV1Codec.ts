@@ -1,4 +1,4 @@
-import { PPQN, type Note, type Project, type Track } from '@core/types'
+import { MAX_BARS, PPQN, type Note, type Project, type Track } from '@core/types'
 import type { ProjectCodec } from './types'
 
 const FORMAT_ID = 'tone-bone/v1'
@@ -115,7 +115,7 @@ export class SimpleJsonV1Codec implements ProjectCodec {
     return {
       title: parsed.title,
       bpm: Math.max(40, Math.min(300, parsed.bpm)),
-      bars: Math.max(1, Math.min(128, Math.round(parsed.bars))),
+      bars: Math.max(1, Math.min(MAX_BARS, Math.round(parsed.bars))),
       loopEnabled: typeof parsed.loopEnabled === 'boolean' ? parsed.loopEnabled : true,
       tracks: parsed.tracks.map((t, i) => validateTrack(t, i))
     }
