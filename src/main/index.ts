@@ -93,7 +93,7 @@ function registerIpcHandlers(): void {
     const result = await dialog.showSaveDialog({
       title: 'プロジェクトを保存',
       defaultPath: join(paths.projects, suggestedName),
-      filters: [{ name: 'Tone Bone Project', extensions: ['tonebone.json', 'json'] }]
+      filters: [{ name: 'Tone Bone Project', extensions: ['json'] }]
     })
     if (result.canceled || !result.filePath) {
       return { canceled: true }
@@ -114,7 +114,7 @@ function registerIpcHandlers(): void {
     const result = await dialog.showOpenDialog({
       title: 'プロジェクトを開く',
       defaultPath: paths.projects,
-      filters: [{ name: 'Tone Bone Project', extensions: ['tonebone.json', 'json'] }],
+      filters: [{ name: 'Tone Bone Project', extensions: ['json'] }],
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) {
