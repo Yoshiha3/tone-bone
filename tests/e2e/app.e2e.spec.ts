@@ -46,6 +46,14 @@ test.describe('Tone Bone Electron E2E', () => {
       await expect(bpmInput).toHaveValue('124')
 
       const barsInput = win.getByTestId('bars-input')
+      await barsInput.fill('200')
+      await barsInput.press('Enter')
+      await expect(barsInput).toHaveValue('200')
+      // Verify virtualized canvas stays viewport-sized even at 200 bars (not 67,000px!)
+      const canvasBoxAt200 = await win.getByTestId('piano-roll-canvas').boundingBox()
+      expect(canvasBoxAt200).not.toBeNull()
+      expect(canvasBoxAt200!.width).toBeLessThan(1600)
+
       await barsInput.fill('6')
       await barsInput.press('Enter')
       await expect(barsInput).toHaveValue('6')

@@ -13,7 +13,14 @@
   position: relative;
 }
 
+.spacer {
+  position: relative;
+}
+
 .canvas {
+  position: sticky;
+  top: 0;
+  left: 0;
   display: block;
   cursor: crosshair;
 }
