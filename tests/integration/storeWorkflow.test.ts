@@ -78,15 +78,38 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     // Modify BPM and Mute/Solo, then save via CodecRegistry -> MemoryPlatform
     store.getState().setBpm(128)
     store.getState().toggleMute(trackId)
+    expect(store.getState().isDirty).toBe(true)
+
+    // First save opens save dialog and records currentFilePath
     const saved = await store.getState().saveProject()
     expect(saved).toBe(true)
+    expect(store.getState().isDirty).toBe(false)
+    expect(platform.saveDialogCount).toBe(1)
+    expect(platform.directWriteCount).toBe(0)
     expect(platform.lastSavedProjectContent).toContain('"bpm": 128')
 
-    // Load saved content into a brand new store and assert exact equality
+    // Second save overwrites directly without opening save dialog
+    store.getState().setBpm(132)
+    expect(store.getState().isDirty).toBe(true)
+    const overwritten = await store.getState().saveProject()
+    expect(overwritten).toBe(true)
+    expect(store.getState().isDirty).toBe(false)
+    expect(platform.saveDialogCount).toBe(1)
+    expect(platform.directWriteCount).toBe(1)
+    expect(platform.lastSavedProjectContent).toContain('"bpm": 132')
+
+    // Save As explicitly opens save dialog again
+    const savedAs = await store.getState().saveProjectAs()
+    expect(savedAs).toBe(true)
+    expect(platform.saveDialogCount).toBe(2)
+
+    // Load saved content into a brand new store and assert exact equality + currentFilePath
     const expectedSnapshot = structuredClone(store.getState().project)
     const freshStore = createProjectStore({ platform, codecs: createDefaultCodecRegistry() })
     const opened = await freshStore.getState().openProject()
     expect(opened).toBe(true)
     expect(freshStore.getState().project).toEqual(expectedSnapshot)
+    expect(freshStore.getState().currentFilePath).toBe(platform.lastSavedProjectPath)
+    expect(freshStore.getState().isDirty).toBe(false)
   })
 })

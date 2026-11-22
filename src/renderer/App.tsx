@@ -88,7 +88,8 @@ export function App() {
 
       if (mod && e.key.toLowerCase() === 's') {
         e.preventDefault()
-        void state.saveProject()
+        if (e.shiftKey) void state.saveProjectAs()
+        else void state.saveProject()
         return
       }
 

@@ -80,3 +80,16 @@
   background: var(--accent-primary);
   color: var(--accent-contrast);
 }
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dirtyDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}

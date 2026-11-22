@@ -13,6 +13,7 @@ export interface OpenFileResult {
 
 export interface PlatformAdapter {
   saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult>
+  writeProjectFile(filePath: string, content: string): Promise<SaveFileResult>
   openProjectFile(): Promise<OpenFileResult>
   saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult>
   loadSettings(): Promise<AppSettings>

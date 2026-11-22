@@ -49,6 +49,8 @@ export interface ProjectStoreState {
   settingsOpen: boolean
   isPlaying: boolean
   statusMessage: string | null
+  currentFilePath: string | null
+  isDirty: boolean
 
   settings: AppSettings
   availablePacks: ResourcePack[]
@@ -62,6 +64,7 @@ export interface ProjectStoreState {
   chooseWorkspaceDir(): Promise<void>
   openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
   saveProject(): Promise<boolean>
+  saveProjectAs(): Promise<boolean>
   openProject(): Promise<boolean>
 
   // UI state
@@ -132,7 +135,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       const state = get()
       const nextProject = updater(state.project)
       const nextHistory = pushHistory(state.history, nextProject)
-      set({ history: nextHistory, project: nextProject })
+      set({ history: nextHistory, project: nextProject, isDirty: true })
     }
 
     return {
@@ -147,6 +150,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       settingsOpen: false,
       isPlaying: false,
       statusMessage: null,
+      currentFilePath: null,
+      isDirty: false,
 
       settings: {
         workspaceDir: '',
@@ -216,12 +221,35 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       },
 
       async saveProject() {
+        const { project, currentFilePath } = get()
+        if (currentFilePath) {
+          try {
+            const encoded = deps.codecs.encodeDefault(project)
+            const result = await deps.platform.writeProjectFile(currentFilePath, encoded)
+            if (!result.canceled) {
+              set({ isDirty: false, statusMessage: '上書き保存しました' })
+              return true
+            }
+            return false
+          } catch {
+            // Fall back to Save As dialog if target path is no longer writable
+            return get().saveProjectAs()
+          }
+        }
+        return get().saveProjectAs()
+      },
+
+      async saveProjectAs() {
         const { project } = get()
         const safeName = (project.title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
         const encoded = deps.codecs.encodeDefault(project)
         const result = await deps.platform.saveProjectFile(`${safeName}.tonebone.json`, encoded)
-        if (!result.canceled) {
-          set({ statusMessage: 'プロジェクトを保存しました' })
+        if (!result.canceled && result.filePath) {
+          set({
+            currentFilePath: result.filePath,
+            isDirty: false,
+            statusMessage: 'プロジェクトを保存しました'
+          })
           return true
         }
         return false
@@ -237,6 +265,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
             project,
             selectedTrackId: project.tracks[0]?.id ?? '',
             selectedNoteIds: [],
+            currentFilePath: result.filePath ?? null,
+            isDirty: false,
             statusMessage: `「${project.title}」を読み込みました`
           })
           return true
@@ -420,21 +450,21 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       commitProjectSnapshot: (nextProject) => {
         const state = get()
         const nextHistory = pushHistory(state.history, nextProject)
-        set({ history: nextHistory, project: nextProject })
+        set({ history: nextHistory, project: nextProject, isDirty: true })
       },
 
       undo: () => {
         const { history } = get()
         if (!canUndo(history)) return
         const prev = undoHistory(history)
-        set({ history: prev, project: prev.present, selectedNoteIds: [] })
+        set({ history: prev, project: prev.present, selectedNoteIds: [], isDirty: true })
       },
 
       redo: () => {
         const { history } = get()
         if (!canRedo(history)) return
         const next = redoHistory(history)
-        set({ history: next, project: next.present, selectedNoteIds: [] })
+        set({ history: next, project: next.present, selectedNoteIds: [], isDirty: true })
       },
 
       canUndo: () => canUndo(get().history),

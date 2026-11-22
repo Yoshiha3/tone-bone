@@ -5,6 +5,7 @@ declare global {
   interface Window {
     tonebone?: {
       saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult>
+      writeProjectFile(filePath: string, content: string): Promise<SaveFileResult>
       openProjectFile(): Promise<OpenFileResult>
       saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult>
       loadSettings(): Promise<AppSettings>
@@ -26,6 +27,10 @@ export class ElectronPlatformAdapter implements PlatformAdapter {
 
   saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult> {
     return this.bridge.saveProjectFile(suggestedName, content)
+  }
+
+  writeProjectFile(filePath: string, content: string): Promise<SaveFileResult> {
+    return this.bridge.writeProjectFile(filePath, content)
   }
 
   openProjectFile(): Promise<OpenFileResult> {
