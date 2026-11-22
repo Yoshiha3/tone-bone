@@ -34,9 +34,15 @@ test.describe('Tone Bone Electron E2E', () => {
 
       await win.screenshot({ path: join(ARTIFACT_DIR, 'edit-minimal-light.png') })
 
-      // 2. BPM change & triplet grid selection
+      // 2. BPM change (including intermediate single-digit typing like '1' -> '154' -> '124') & triplet grid
       const bpmInput = win.getByTestId('bpm-input')
+      await bpmInput.fill('1')
+      await expect(bpmInput).toHaveValue('1')
+      await bpmInput.fill('154')
+      await bpmInput.press('Enter')
+      await expect(bpmInput).toHaveValue('154')
       await bpmInput.fill('124')
+      await bpmInput.press('Enter')
       await expect(bpmInput).toHaveValue('124')
 
       const gridSelect = win.getByTestId('grid-select')

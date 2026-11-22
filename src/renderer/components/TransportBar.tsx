@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { clamp } from '@core/musicMath'
 import { GRID_DIVISIONS, type GridDivision } from '@core/types'
 import { audioEngine, wavExporter } from '../audioContext'
 import { defaultPlatform, useProjectStore } from '../store/useProjectStore'
@@ -27,6 +28,25 @@ export function TransportBar() {
   const instruments = useProjectStore((s) => s.mergedPacks.instruments)
 
   const [exporting, setExporting] = useState(false)
+  const [bpmText, setBpmText] = useState(String(bpm))
+
+  useEffect(() => {
+    setBpmText(String(bpm))
+  }, [bpm])
+
+  const commitBpm = (): void => {
+    const trimmed = bpmText.trim()
+    const parsed = Number(trimmed)
+    if (trimmed.length === 0 || !Number.isFinite(parsed)) {
+      setBpmText(String(bpm))
+      return
+    }
+    const next = clamp(Math.round(parsed), 40, 300)
+    if (next !== bpm) {
+      setBpm(next)
+    }
+    setBpmText(String(next))
+  }
 
   const handleTogglePlay = (): void => {
     if (audioEngine.getIsPlaying()) {
@@ -96,13 +116,25 @@ export function TransportBar() {
         <label className={styles.field}>
           <span>BPM</span>
           <input
-            type="number"
-            min={40}
-            max={300}
-            value={bpm}
-            onChange={(e) => {
-              const val = Number(e.target.value)
-              if (!Number.isNaN(val)) setBpm(val)
+            type="text"
+            inputMode="numeric"
+            value={bpmText}
+            onChange={(e) => setBpmText(e.target.value)}
+            onBlur={commitBpm}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                commitBpm()
+                e.currentTarget.blur()
+              } else if (e.key === 'Escape') {
+                setBpmText(String(bpm))
+                e.currentTarget.blur()
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                setBpm(bpm + 1)
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                setBpm(bpm - 1)
+              }
             }}
             className={styles.bpmInput}
             data-testid="bpm-input"
