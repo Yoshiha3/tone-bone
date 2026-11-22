@@ -1,18 +1,22 @@
-import { useEffect, useState } from 'react'
-import { clamp } from '@core/musicMath'
+import { useState } from 'react'
 import { GRID_DIVISIONS, MAX_BARS, type GridDivision } from '@core/types'
-import { audioEngine, wavExporter } from '../audioContext'
-import { defaultPlatform, useProjectStore } from '../store/useProjectStore'
+import {
+  exportCurrentProjectWav,
+  requestNewProject,
+  stopPlayback,
+  togglePlayPause
+} from '../actions'
+import { useProjectStore } from '../store/useProjectStore'
+import { NumericInput } from './NumericInput'
 import styles from './TransportBar.module.css'
 
 export function TransportBar() {
   const bpm = useProjectStore((s) => s.project.bpm)
   const bars = useProjectStore((s) => s.project.bars)
-  const title = useProjectStore((s) => s.project.title)
   const loopEnabled = useProjectStore((s) => s.project.loopEnabled)
   const gridDivision = useProjectStore((s) => s.gridDivision)
   const isPlaying = useProjectStore((s) => s.isPlaying)
-  const setIsPlaying = useProjectStore((s) => s.setIsPlaying)
+  const isDirty = useProjectStore((s) => s.isDirty)
   const setBpm = useProjectStore((s) => s.setBpm)
   const setBars = useProjectStore((s) => s.setBars)
   const toggleLoop = useProjectStore((s) => s.toggleLoop)
@@ -22,83 +26,14 @@ export function TransportBar() {
   const saveProject = useProjectStore((s) => s.saveProject)
   const saveProjectAs = useProjectStore((s) => s.saveProjectAs)
   const openProject = useProjectStore((s) => s.openProject)
-  const newProject = useProjectStore((s) => s.newProject)
-  const isDirty = useProjectStore((s) => s.isDirty)
-  const project = useProjectStore((s) => s.project)
-  const instruments = useProjectStore((s) => s.mergedPacks.instruments)
 
   const [exporting, setExporting] = useState(false)
-  const [bpmText, setBpmText] = useState(String(bpm))
-  const [barsText, setBarsText] = useState(String(bars))
-
-  useEffect(() => {
-    setBpmText(String(bpm))
-  }, [bpm])
-
-  useEffect(() => {
-    setBarsText(String(bars))
-  }, [bars])
-
-  const commitBpm = (): void => {
-    const trimmed = bpmText.trim()
-    const parsed = Number(trimmed)
-    if (trimmed.length === 0 || !Number.isFinite(parsed)) {
-      setBpmText(String(bpm))
-      return
-    }
-    const next = clamp(Math.round(parsed), 40, 300)
-    if (next !== bpm) {
-      setBpm(next)
-    }
-    setBpmText(String(next))
-  }
-
-  const commitBars = (): void => {
-    const trimmed = barsText.trim()
-    const parsed = Number(trimmed)
-    if (trimmed.length === 0 || !Number.isFinite(parsed)) {
-      setBarsText(String(bars))
-      return
-    }
-    const next = clamp(Math.round(parsed), 1, MAX_BARS)
-    if (next !== bars) {
-      setBars(next)
-    }
-    setBarsText(String(next))
-  }
-
-  const handleTogglePlay = (): void => {
-    if (audioEngine.getIsPlaying()) {
-      audioEngine.pause()
-      setIsPlaying(false)
-    } else {
-      audioEngine.play()
-      setIsPlaying(true)
-    }
-  }
-
-  const handleStop = (): void => {
-    audioEngine.stop()
-    setIsPlaying(false)
-  }
-
-  const handleNewProject = (): void => {
-    if (isDirty) {
-      const ok = window.confirm('未保存の変更があります。破棄して新規プロジェクトを作成しますか？')
-      if (!ok) return
-    }
-    audioEngine.stop()
-    setIsPlaying(false)
-    newProject()
-  }
 
   const handleExportWav = async (): Promise<void> => {
     if (exporting) return
     setExporting(true)
     try {
-      const wavBytes = await wavExporter.export(project, instruments)
-      const safeName = (title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
-      await defaultPlatform.saveWavFile(`${safeName}.wav`, wavBytes)
+      await exportCurrentProjectWav()
     } finally {
       setExporting(false)
     }
@@ -111,13 +46,13 @@ export function TransportBar() {
         <button
           type="button"
           className={styles.playBtn}
-          onClick={handleTogglePlay}
+          onClick={togglePlayPause}
           data-testid="play-toggle-btn"
           title="再生 / 一時停止 (Space)"
         >
           {isPlaying ? '一時停止' : '再生'}
         </button>
-        <button type="button" onClick={handleStop} data-testid="stop-btn" title="停止">
+        <button type="button" onClick={stopPlayback} data-testid="stop-btn" title="停止">
           停止
         </button>
         <button
@@ -134,57 +69,25 @@ export function TransportBar() {
       <div className={styles.group}>
         <label className={styles.field}>
           <span>BPM</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={bpmText}
-            onChange={(e) => setBpmText(e.target.value)}
-            onBlur={commitBpm}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                commitBpm()
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                setBpmText(String(bpm))
-                e.currentTarget.blur()
-              } else if (e.key === 'ArrowUp') {
-                e.preventDefault()
-                setBpm(bpm + 1)
-              } else if (e.key === 'ArrowDown') {
-                e.preventDefault()
-                setBpm(bpm - 1)
-              }
-            }}
+          <NumericInput
+            value={bpm}
+            min={40}
+            max={300}
+            onCommit={setBpm}
             className={styles.bpmInput}
-            data-testid="bpm-input"
+            testId="bpm-input"
           />
         </label>
 
         <label className={styles.field}>
           <span>小節</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            value={barsText}
-            onChange={(e) => setBarsText(e.target.value)}
-            onBlur={commitBars}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                commitBars()
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                setBarsText(String(bars))
-                e.currentTarget.blur()
-              } else if (e.key === 'ArrowUp') {
-                e.preventDefault()
-                setBars(bars + 1)
-              } else if (e.key === 'ArrowDown') {
-                e.preventDefault()
-                setBars(bars - 1)
-              }
-            }}
+          <NumericInput
+            value={bars}
+            min={1}
+            max={MAX_BARS}
+            onCommit={setBars}
             className={styles.barsInput}
-            data-testid="bars-input"
+            testId="bars-input"
           />
         </label>
 
@@ -217,7 +120,7 @@ export function TransportBar() {
         <div className={styles.divider} />
         <button
           type="button"
-          onClick={handleNewProject}
+          onClick={requestNewProject}
           title="新規作成 (Cmd/Ctrl+N)"
           data-testid="new-project-btn"
         >
@@ -244,11 +147,7 @@ export function TransportBar() {
         >
           {exporting ? '書出中...' : 'WAV'}
         </button>
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          data-testid="settings-btn"
-        >
+        <button type="button" onClick={() => setSettingsOpen(true)} data-testid="settings-btn">
           設定
         </button>
       </div>

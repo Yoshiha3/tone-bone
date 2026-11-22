@@ -1,23 +1,18 @@
 import { useEffect, useRef } from 'react'
-import { DRUM_LANES } from '@core/types'
+import { pitchToVisualYRatio } from '@visualizers/canvasUtils'
 import { createDefaultVisualizerRegistry } from '@visualizers/VisualizerRegistry'
 import type { ActiveRipple } from '@visualizers/types'
+import { togglePlayPause } from '../actions'
 import { audioEngine } from '../audioContext'
 import { useProjectStore } from '../store/useProjectStore'
+import { readTrackPalette } from '../themeTokens'
 import styles from './StageVisualizer.module.css'
 
 const visualizerRegistry = createDefaultVisualizerRegistry()
 
-function getTrackColors(): string[] {
-  const style = getComputedStyle(document.documentElement)
-  const fallbacks = ['#3b6ea5', '#3c8d7a', '#c07a45', '#7b63a8', '#b85c6f', '#547c99']
-  return fallbacks.map((fb, i) => style.getPropertyValue(`--track-color-${i}`).trim() || fb)
-}
-
 export function StageVisualizer() {
   const project = useProjectStore((s) => s.project)
   const isPlaying = useProjectStore((s) => s.isPlaying)
-  const setIsPlaying = useProjectStore((s) => s.setIsPlaying)
   const setViewMode = useProjectStore((s) => s.setViewMode)
   const preset = useProjectStore((s) => s.mergedPacks.visualizer)
   const activePackIds = useProjectStore((s) => s.mergedPacks.activePackIds)
@@ -25,20 +20,22 @@ export function StageVisualizer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const ripplesRef = useRef<ActiveRipple[]>([])
   const waveformRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(new ArrayBuffer(512)))
+  const paletteRef = useRef<string[]>(readTrackPalette())
+
+  // Cache track colors whenever active resource packs change
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => {
+      paletteRef.current = readTrackPalette()
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [activePackIds])
 
   // Spawn calm visual ripples whenever a note triggers
   useEffect(() => {
     const unsubscribe = audioEngine.onNoteTrigger((evt) => {
-      const colors = getTrackColors()
+      const colors = paletteRef.current
       const track = project.tracks.find((t) => t.id === evt.trackId)
-      const isDrum = track?.type === 'drum'
-      let yRatio: number
-      if (isDrum) {
-        yRatio = 0.84 - (evt.note.pitch / Math.max(1, DRUM_LANES.length)) * 0.18
-      } else {
-        const norm = (evt.note.pitch - 36) / (84 - 36)
-        yRatio = 0.76 - Math.max(0, Math.min(1, norm)) * 0.68
-      }
+      const yRatio = pitchToVisualYRatio(evt.note.pitch, track?.type === 'drum')
 
       ripplesRef.current.push({
         xRatio: 0.28,
@@ -74,13 +71,9 @@ export function StageVisualizer() {
           ctx.save()
           ctx.scale(dpr, dpr)
 
-          // Pull waveform (default flat line at 128 when silent)
-          const gotWave = audioEngine.getWaveformData(waveformRef.current)
-          if (!gotWave) {
+          if (!audioEngine.getWaveformData(waveformRef.current)) {
             waveformRef.current.fill(128)
           }
-
-          // Prune expired ripples
           ripplesRef.current = ripplesRef.current.filter((r) => nowMs - r.createdAtMs < 750)
 
           renderer.render(
@@ -92,7 +85,7 @@ export function StageVisualizer() {
               currentTick: audioEngine.getCurrentTick(),
               isPlaying: audioEngine.getIsPlaying(),
               project,
-              trackColors: getTrackColors(),
+              trackColors: paletteRef.current,
               waveform: waveformRef.current,
               ripples: ripplesRef.current
             },
@@ -108,16 +101,6 @@ export function StageVisualizer() {
     return () => cancelAnimationFrame(rafId)
   }, [project, preset, activePackIds])
 
-  const handleTogglePlay = (): void => {
-    if (audioEngine.getIsPlaying()) {
-      audioEngine.pause()
-      setIsPlaying(false)
-    } else {
-      audioEngine.play()
-      setIsPlaying(true)
-    }
-  }
-
   return (
     <div className={styles.stage} data-testid="stage-visualizer">
       <canvas ref={canvasRef} className={styles.canvas} data-testid="stage-canvas" />
@@ -130,7 +113,7 @@ export function StageVisualizer() {
           <button
             type="button"
             className={styles.playBtn}
-            onClick={handleTogglePlay}
+            onClick={togglePlayPause}
             data-testid="stage-play-btn"
           >
             {isPlaying ? '一時停止' : '再生'}

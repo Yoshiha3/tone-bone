@@ -1,24 +1,7 @@
 import { getAudibleTrackIds } from '@core/musicMath'
-import { DRUM_LANES, PPQN, TICKS_PER_BAR, type VisualizerPreset } from '@core/types'
+import { PPQN, TICKS_PER_BAR, type VisualizerPreset } from '@core/types'
+import { drawRoundedRect, pitchToVisualYRatio } from './canvasUtils'
 import type { VisualizerFrameState, VisualizerRenderer } from './types'
-
-function roundRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  const radius = Math.min(r, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + radius, y)
-  ctx.arcTo(x + w, y, x + w, y + h, radius)
-  ctx.arcTo(x + w, y + h, x, y + h, radius)
-  ctx.arcTo(x, y + h, x, y, radius)
-  ctx.arcTo(x, y, x + w, y, radius)
-  ctx.closePath()
-}
 
 /**
  * Calm, geometric horizontal note flow with subtle hit ripples and a clean
@@ -41,7 +24,7 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
     ctx.fillRect(0, 0, width, height)
 
     const playheadX = width * 0.28
-    const visibleTicks = TICKS_PER_BAR * 2 // 2 bars visible across viewport
+    const visibleTicks = TICKS_PER_BAR * 2
     const pxPerTick = width / visibleTicks
 
     // 2. Subtle beat & bar guide lines scrolling smoothly
@@ -74,12 +57,11 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
     ctx.stroke()
     ctx.restore()
 
-    // 4. Flowing notes across all audible tracks (wrapped seamlessly for loops)
+    // 4. Flowing notes across all audible tracks
     const audibleIds = getAudibleTrackIds(project.tracks)
     const padTop = height * 0.14
     const padBottom = height * 0.16
     const usableHeight = height - padTop - padBottom
-
     const loopOffsets = project.loopEnabled ? [-totalTicks, 0, totalTicks] : [0]
 
     for (const track of project.tracks) {
@@ -95,15 +77,7 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
 
           const x = playheadX + (nStart - currentTick) * pxPerTick
           const w = Math.max(8, note.durationTick * pxPerTick)
-
-          let yRatio: number
-          if (isDrum) {
-            yRatio = 0.84 - (note.pitch / Math.max(1, DRUM_LANES.length)) * 0.18
-          } else {
-            const norm = (note.pitch - 36) / (84 - 36)
-            yRatio = 0.76 - Math.max(0, Math.min(1, norm)) * 0.68
-          }
-
+          const yRatio = pitchToVisualYRatio(note.pitch, isDrum)
           const y = padTop + yRatio * usableHeight
           const h = isDrum ? 8 : 12
           const isActive = nStart <= currentTick && nEnd >= currentTick
@@ -111,10 +85,9 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
           ctx.save()
           ctx.fillStyle = color
           ctx.globalAlpha = isActive ? 1.0 : preset.noteOpacity * 0.62
-          roundRectPath(ctx, x, y - h / 2, w, h, h / 2)
+          drawRoundedRect(ctx, x, y - h / 2, w, h, h / 2)
           ctx.fill()
 
-          // Subtle highlight ring on the playhead intersection when active
           if (isActive) {
             ctx.strokeStyle = color
             ctx.globalAlpha = 0.45
@@ -144,7 +117,7 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
       ctx.restore()
     }
 
-    // 6. Clean, restrained oscilloscope waveform ribbon near the bottom
+    // 6. Clean oscilloscope waveform ribbon near the bottom
     if (preset.showWaveform && waveform.length > 0) {
       const baseY = height - 44
       const amp = 20

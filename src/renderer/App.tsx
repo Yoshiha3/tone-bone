@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { applyPackTheme } from '@packs/themeApplier'
+import { requestNewProject, togglePlayPause } from './actions'
 import { audioEngine } from './audioContext'
 import { PianoRoll } from './components/PianoRoll'
 import { SettingsModal } from './components/SettingsModal'
@@ -15,17 +16,14 @@ export function App() {
   const statusMessage = useProjectStore((s) => s.statusMessage)
   const clearStatusMessage = useProjectStore((s) => s.clearStatusMessage)
 
-  // Initialize settings and resource packs on startup
   useEffect(() => {
     void projectStore.getState().initialize()
   }, [])
 
-  // Apply merged resource pack CSS tokens & optional override CSS whenever packs change
   useEffect(() => {
     applyPackTheme(mergedPacks)
   }, [mergedPacks])
 
-  // Auto-clear brief status toast
   useEffect(() => {
     if (!statusMessage) return
     const timer = setTimeout(() => clearStatusMessage(), 2800)
@@ -45,11 +43,8 @@ export function App() {
       const mod = e.metaKey || e.ctrlKey
 
       if (e.key === 'Escape') {
-        if (state.settingsOpen) {
-          state.setSettingsOpen(false)
-        } else if (state.viewMode === 'stage') {
-          state.setViewMode('edit')
-        }
+        if (state.settingsOpen) state.setSettingsOpen(false)
+        else if (state.viewMode === 'stage') state.setViewMode('edit')
         return
       }
 
@@ -57,13 +52,7 @@ export function App() {
 
       if (e.code === 'Space') {
         e.preventDefault()
-        if (audioEngine.getIsPlaying()) {
-          audioEngine.pause()
-          state.setIsPlaying(false)
-        } else {
-          audioEngine.play()
-          state.setIsPlaying(true)
-        }
+        togglePlayPause()
         return
       }
 
@@ -88,13 +77,7 @@ export function App() {
 
       if (mod && e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        if (state.isDirty) {
-          const ok = window.confirm('未保存の変更があります。破棄して新規プロジェクトを作成しますか？')
-          if (!ok) return
-        }
-        audioEngine.stop()
-        state.setIsPlaying(false)
-        state.newProject()
+        requestNewProject()
         return
       }
 
