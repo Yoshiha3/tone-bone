@@ -1,0 +1,142 @@
+.sidebar {
+  width: 248px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.addButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.smallBtn {
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: 8px 10px 8px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+}
+
+.cardSelected {
+  background: var(--bg-surface-alt);
+  border-color: var(--accent-primary);
+}
+
+.colorBar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.rowTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.trackName {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deleteBtn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: transparent;
+  color: var(--danger);
+}
+
+.instrumentSelect {
+  width: 100%;
+  font-size: 12px;
+  padding: 3px 6px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pillBtn {
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 24px;
+}
+
+.mutedActive {
+  background: var(--mute-active);
+  border-color: var(--mute-active);
+  color: var(--accent-contrast);
+}
+
+.soloActive {
+  background: var(--solo-active);
+  border-color: var(--solo-active);
+  color: var(--accent-contrast);
+}
+
+.volumeSlider {
+  flex: 1;
+  accent-color: var(--accent-primary);
+  height: 4px;
+  cursor: pointer;
+}

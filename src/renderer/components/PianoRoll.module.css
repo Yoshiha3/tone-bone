@@ -1,0 +1,66 @@
+.wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--grid-bg);
+  overflow: hidden;
+}
+
+.scrollArea {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.canvas {
+  display: block;
+  cursor: crosshair;
+}
+
+.canvasSelect {
+  cursor: default;
+}
+
+.footer {
+  height: 34px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.footerGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolBtn {
+  padding: 2px 9px;
+  font-size: 11px;
+}
+
+.toolBtnActive {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--accent-contrast);
+}
+
+.toolBtnActive:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}
+
+.hint {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
