@@ -45,6 +45,11 @@ test.describe('Tone Bone Electron E2E', () => {
       await bpmInput.press('Enter')
       await expect(bpmInput).toHaveValue('124')
 
+      const barsInput = win.getByTestId('bars-input')
+      await barsInput.fill('6')
+      await barsInput.press('Enter')
+      await expect(barsInput).toHaveValue('6')
+
       const gridSelect = win.getByTestId('grid-select')
       await gridSelect.selectOption('1/12')
       await expect(gridSelect).toHaveValue('1/12')

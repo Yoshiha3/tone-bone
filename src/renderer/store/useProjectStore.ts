@@ -304,7 +304,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
       setTitle: (title) => commit((p) => ({ ...p, title })),
       setBpm: (bpm) => commit((p) => ({ ...p, bpm: clamp(Math.round(bpm), 40, 300) })),
-      setBars: (bars) => commit((p) => ({ ...p, bars: clamp(Math.round(bars), 1, 32) })),
+      setBars: (bars) => commit((p) => ({ ...p, bars: clamp(Math.round(bars), 1, 128) })),
       toggleLoop: () => commit((p) => ({ ...p, loopEnabled: !p.loopEnabled })),
 
       addTrack: (type) => {
