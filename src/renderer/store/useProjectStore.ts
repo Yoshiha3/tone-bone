@@ -14,11 +14,13 @@ import {
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
 import {
   DRUM_LANES,
+  PPQN,
   TICKS_PER_BAR,
   type AppSettings,
   type GridDivision,
   type MergedPackConfig,
   type Note,
+  type NoteLengthMode,
   type Project,
   type ResourcePack,
   type Track,
@@ -42,6 +44,7 @@ export interface ProjectStoreState {
   selectedNoteIds: string[]
   clipboardNotes: Note[]
   gridDivision: GridDivision
+  lastNoteDurationTick: number
   viewMode: ViewMode
   settingsOpen: boolean
   isPlaying: boolean
@@ -55,6 +58,7 @@ export interface ProjectStoreState {
   initialize(): Promise<void>
   reloadPacks(): Promise<void>
   setActivePackIds(packIds: string[]): Promise<void>
+  setNoteLengthMode(mode: NoteLengthMode): Promise<void>
   chooseWorkspaceDir(): Promise<void>
   openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
   saveProject(): Promise<boolean>
@@ -64,6 +68,7 @@ export interface ProjectStoreState {
   setViewMode(mode: ViewMode): void
   setSettingsOpen(open: boolean): void
   setGridDivision(division: GridDivision): void
+  setLastNoteDurationTick(ticks: number): void
   setIsPlaying(playing: boolean): void
   setSelectedTrackId(trackId: string): void
   setSelectedNoteIds(noteIds: string[]): void
@@ -137,6 +142,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       selectedNoteIds: [],
       clipboardNotes: [],
       gridDivision: '1/16',
+      lastNoteDurationTick: PPQN / 2,
       viewMode: 'edit',
       settingsOpen: false,
       isPlaying: false,
@@ -144,7 +150,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
       settings: {
         workspaceDir: '',
-        activePackIds: ['default-minimal']
+        activePackIds: ['default-minimal'],
+        noteLengthMode: 'last-used'
       },
       availablePacks: [],
       mergedPacks: INITIAL_MERGED,
@@ -185,6 +192,13 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         await deps.platform.saveSettings(nextSettings)
         set({ settings: nextSettings, mergedPacks: merged })
         deps.onThemeChanged?.(merged)
+      },
+
+      async setNoteLengthMode(mode) {
+        const { settings } = get()
+        const nextSettings: AppSettings = { ...settings, noteLengthMode: mode }
+        await deps.platform.saveSettings(nextSettings)
+        set({ settings: nextSettings })
       },
 
       async chooseWorkspaceDir() {
@@ -237,6 +251,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       setViewMode: (viewMode) => set({ viewMode }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setGridDivision: (gridDivision) => set({ gridDivision }),
+      setLastNoteDurationTick: (ticks) => set({ lastNoteDurationTick: Math.max(30, Math.round(ticks)) }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
       setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId, selectedNoteIds: [] }),
       setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
@@ -298,14 +313,19 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
       addNote: (trackId, noteInput) => {
         const note: Note = { ...noteInput, id: createId('note') }
+        const track = get().project.tracks.find((t) => t.id === trackId)
         commit((p) => ({
           ...p,
           tracks: p.tracks.map((t) => (t.id === trackId ? { ...t, notes: [...t.notes, note] } : t))
         }))
+        if (track?.type === 'synth') {
+          set({ lastNoteDurationTick: Math.max(30, Math.round(note.durationTick)) })
+        }
         return note
       },
 
       updateNote: (trackId, noteId, patch) => {
+        const track = get().project.tracks.find((t) => t.id === trackId)
         commit((p) => ({
           ...p,
           tracks: p.tracks.map((t) =>
@@ -314,6 +334,9 @@ export function createProjectStore(deps: ProjectStoreDeps) {
               : t
           )
         }))
+        if (track?.type === 'synth' && typeof patch.durationTick === 'number') {
+          set({ lastNoteDurationTick: Math.max(30, Math.round(patch.durationTick)) })
+        }
       },
 
       deleteNote: (trackId, noteId) => {

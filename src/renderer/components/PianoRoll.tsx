@@ -65,6 +65,9 @@ export function PianoRoll() {
   const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
   const selectedNoteIds = useProjectStore((s) => s.selectedNoteIds)
   const gridDivision = useProjectStore((s) => s.gridDivision)
+  const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
+  const lastNoteDurationTick = useProjectStore((s) => s.lastNoteDurationTick)
+  const setLastNoteDurationTick = useProjectStore((s) => s.setLastNoteDurationTick)
   const activePackIds = useProjectStore((s) => s.mergedPacks.activePackIds)
   const setSelectedNoteIds = useProjectStore((s) => s.setSelectedNoteIds)
   const addNote = useProjectStore((s) => s.addNote)
@@ -187,6 +190,9 @@ export function PianoRoll() {
         nextSelected = [hit.note.id]
       }
       setSelectedNoteIds(nextSelected)
+      if (!isDrum) {
+        setLastNoteDurationTick(hit.note.durationTick)
+      }
 
       if (hit.isRightEdge && !isDrum) {
         dragRef.current = { kind: 'resize', noteId: hit.note.id, origStart: hit.note.startTick }
@@ -218,10 +224,13 @@ export function PianoRoll() {
     const step = getGridTickStep(gridDivision)
     const startTick = Math.min(totalTicks - step, floorTickToGrid(xToTick(x), gridDivision))
     const pitch = yToPitch(y)
+    const preferredDuration =
+      !isDrum && noteLengthMode === 'last-used' ? lastNoteDurationTick : step
+    const durationTick = Math.max(30, Math.min(totalTicks - startTick, preferredDuration))
     const created = addNote(track.id, {
       pitch,
       startTick,
-      durationTick: step,
+      durationTick,
       velocity: 0.8
     })
     setSelectedNoteIds([created.id])

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import styles from './TrackList.module.css'
 
@@ -11,6 +12,22 @@ export function TrackList() {
   const updateTrack = useProjectStore((s) => s.updateTrack)
   const toggleMute = useProjectStore((s) => s.toggleMute)
   const toggleSolo = useProjectStore((s) => s.toggleSolo)
+
+  const [editingTrackId, setEditingTrackId] = useState<string | null>(null)
+  const [draftName, setDraftName] = useState('')
+
+  const startRename = (trackId: string, currentName: string): void => {
+    setEditingTrackId(trackId)
+    setDraftName(currentName)
+  }
+
+  const commitRename = (trackId: string): void => {
+    const trimmed = draftName.trim()
+    if (trimmed.length > 0) {
+      updateTrack(trackId, { name: trimmed })
+    }
+    setEditingTrackId(null)
+  }
 
   return (
     <aside className={styles.sidebar} data-testid="track-list">
@@ -53,7 +70,38 @@ export function TrackList() {
               />
 
               <div className={styles.rowTop}>
-                <span className={styles.trackName}>{track.name}</span>
+                {editingTrackId === track.id ? (
+                  <input
+                    type="text"
+                    className={styles.trackNameInput}
+                    value={draftName}
+                    autoFocus
+                    onFocus={(e) => e.currentTarget.select()}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onBlur={() => commitRename(track.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        commitRename(track.id)
+                      } else if (e.key === 'Escape') {
+                        setEditingTrackId(null)
+                      }
+                    }}
+                    data-testid={`track-name-input-${track.id}`}
+                  />
+                ) : (
+                  <span
+                    className={styles.trackName}
+                    title="ダブルクリックで名前を変更"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation()
+                      startRename(track.id, track.name)
+                    }}
+                    data-testid={`track-name-${track.id}`}
+                  >
+                    {track.name}
+                  </span>
+                )}
                 {tracks.length > 1 && (
                   <button
                     type="button"
