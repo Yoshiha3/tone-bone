@@ -1,25 +1,28 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   findNotesInRect,
   floorTickToGrid,
   getGridTickStep,
-  isBlackKey,
-  midiToNoteName,
   moveNotes,
   snapTick
 } from '@core/musicMath'
-import { DRUM_LANES, PPQN, TICKS_PER_BAR, type Note } from '@core/types'
+import type { Note } from '@core/types'
 import { audioEngine } from '../audioContext'
 import { projectStore, useProjectStore } from '../store/useProjectStore'
+import { readThemeTokens, type ThemeTokens } from '../themeTokens'
+import {
+  contentXToTick,
+  contentYToPitch,
+  CREATE_DRAG_THRESHOLD_PX,
+  createPianoRollMetrics,
+  hitTestNote,
+  KEY_COL_WIDTH,
+  RULER_HEIGHT,
+  SYNTH_MAX_PITCH,
+  SYNTH_ROW_HEIGHT
+} from './pianoRoll/pianoRollGeometry'
+import { renderPianoRollFrame, type MarqueeRect } from './pianoRoll/pianoRollRenderer'
 import styles from './PianoRoll.module.css'
-
-const KEY_COL_WIDTH = 72
-const RULER_HEIGHT = 26
-const SYNTH_MIN_PITCH = 36 // C2
-const SYNTH_MAX_PITCH = 84 // C6
-const SYNTH_ROW_HEIGHT = 22
-const DRUM_ROW_HEIGHT = 38
-const CREATE_DRAG_THRESHOLD_PX = 8
 
 type ToolMode = 'draw' | 'select'
 
@@ -44,63 +47,6 @@ type DragState =
       lastDeltaPitch: number
     }
   | { kind: 'marquee'; startX: number; startY: number; curX: number; curY: number }
-
-interface ThemeColors {
-  bgGrid: string
-  rowAlt: string
-  surface: string
-  borderSubtle: string
-  lineBar: string
-  lineBeat: string
-  lineSub: string
-  textPrimary: string
-  textSecondary: string
-  textMuted: string
-  playheadColor: string
-  selectionFill: string
-  selectionBorder: string
-  trackPalette: string[]
-}
-
-function readThemeColors(): ThemeColors {
-  const s = getComputedStyle(document.documentElement)
-  const v = (name: string, fb: string): string => s.getPropertyValue(name).trim() || fb
-  const defaultPalette = ['#3b6ea5', '#3c8d7a', '#c07a45', '#7b63a8', '#b85c6f', '#547c99']
-  return {
-    bgGrid: v('--grid-bg', '#fbfcfe'),
-    rowAlt: v('--grid-row-alt', '#f3f5f8'),
-    surface: v('--bg-surface', '#ffffff'),
-    borderSubtle: v('--border-subtle', '#e2e6ed'),
-    lineBar: v('--grid-line-bar', '#c5cddb'),
-    lineBeat: v('--grid-line-beat', '#dce1ea'),
-    lineSub: v('--grid-line-sub', '#eceff4'),
-    textPrimary: v('--text-primary', '#1e2430'),
-    textSecondary: v('--text-secondary', '#5c6678'),
-    textMuted: v('--text-muted', '#8c96a8'),
-    playheadColor: v('--playhead', '#3b6ea5'),
-    selectionFill: v('--selection-fill', 'rgba(59,110,165,0.14)'),
-    selectionBorder: v('--selection-border', '#3b6ea5'),
-    trackPalette: defaultPalette.map((fb, i) => v(`--track-color-${i}`, fb))
-  }
-}
-
-function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-): void {
-  const radius = Math.min(r, w / 2, h / 2)
-  ctx.beginPath()
-  ctx.moveTo(x + radius, y)
-  ctx.arcTo(x + w, y, x + w, y + h, radius)
-  ctx.arcTo(x + w, y + h, x, y + h, radius)
-  ctx.arcTo(x, y + h, x, y, radius)
-  ctx.arcTo(x, y, x + w, y, radius)
-  ctx.closePath()
-}
 
 export function PianoRoll() {
   const project = useProjectStore((s) => s.project)
@@ -128,22 +74,18 @@ export function PianoRoll() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const dragRef = useRef<DragState>({ kind: 'none' })
   const previewNotesRef = useRef<Note[] | null>(null)
-  const marqueeRef = useRef<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
-  const themeRef = useRef<ThemeColors>(readThemeColors())
+  const marqueeRef = useRef<MarqueeRect | null>(null)
+  const themeRef = useRef<ThemeTokens>(readThemeTokens())
 
   const track = project.tracks.find((t) => t.id === selectedTrackId) ?? project.tracks[0]
   const isDrum = track?.type === 'drum'
-  const minPitch = isDrum ? 0 : SYNTH_MIN_PITCH
-  const maxPitch = isDrum ? DRUM_LANES.length - 1 : SYNTH_MAX_PITCH
-  const rowCount = maxPitch - minPitch + 1
-  const rowHeight = isDrum ? DRUM_ROW_HEIGHT : SYNTH_ROW_HEIGHT
 
-  const pxPerTick = pxPerBeat / PPQN
-  const totalTicks = project.bars * TICKS_PER_BAR
-  const contentWidth = Math.ceil(KEY_COL_WIDTH + totalTicks * pxPerTick + 32)
-  const contentHeight = RULER_HEIGHT + rowCount * rowHeight
+  const metrics = useMemo(
+    () => createPianoRollMetrics(Boolean(isDrum), project.bars, pxPerBeat),
+    [isDrum, project.bars, pxPerBeat]
+  )
 
-  // Keep canvas sized strictly to the visible viewport (never grows with bar count)
+  // Observe visible viewport size so Canvas never grows with bar count
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -158,44 +100,23 @@ export function PianoRoll() {
     return () => observer.disconnect()
   }, [])
 
-  // Cache theme CSS variables only when active packs change (zero getComputedStyle per frame)
+  // Refresh cached CSS theme tokens only when active resource packs change
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
-      themeRef.current = readThemeColors()
+      themeRef.current = readThemeTokens()
     })
     return () => cancelAnimationFrame(raf)
   }, [activePackIds])
 
-  // Scroll synth roll to middle C (C4) when switching to a synth track
+  // Center synth scroll around C4 when switching to a synth track
   useEffect(() => {
     const el = scrollRef.current
     if (!el || isDrum) return
     const c4Row = SYNTH_MAX_PITCH - 60
-    const targetScroll = Math.max(0, c4Row * SYNTH_ROW_HEIGHT - el.clientHeight * 0.45)
-    el.scrollTop = targetScroll
+    el.scrollTop = Math.max(0, c4Row * SYNTH_ROW_HEIGHT - el.clientHeight * 0.45)
   }, [selectedTrackId, isDrum])
 
-  const pitchToContentY = useCallback(
-    (pitch: number): number => RULER_HEIGHT + (maxPitch - pitch) * rowHeight,
-    [maxPitch, rowHeight]
-  )
-
-  const contentYToPitch = useCallback(
-    (contentY: number): number => {
-      const row = Math.floor((contentY - RULER_HEIGHT) / rowHeight)
-      return Math.max(minPitch, Math.min(maxPitch, maxPitch - row))
-    },
-    [maxPitch, minPitch, rowHeight]
-  )
-
-  const contentXToTick = useCallback(
-    (contentX: number): number => Math.max(0, Math.min(totalTicks, (contentX - KEY_COL_WIDTH) / pxPerTick)),
-    [pxPerTick, totalTicks]
-  )
-
-  const getPointerCoords = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ): { viewX: number; viewY: number; contentX: number; contentY: number } => {
+  const getPointerCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const viewX = e.clientX - rect.left
     const viewY = e.clientY - rect.top
@@ -209,54 +130,26 @@ export function PianoRoll() {
     }
   }
 
-  const hitTestNote = (
-    notes: readonly Note[],
-    contentX: number,
-    contentY: number
-  ): { note: Note; isRightEdge: boolean } | null => {
-    for (let i = notes.length - 1; i >= 0; i--) {
-      const n = notes[i]
-      const nx = KEY_COL_WIDTH + n.startTick * pxPerTick
-      const nw = Math.max(10, n.durationTick * pxPerTick)
-      const ny = pitchToContentY(n.pitch) + 2
-      const nh = rowHeight - 4
-      if (contentX >= nx && contentX <= nx + nw && contentY >= ny && contentY <= ny + nh) {
-        return { note: n, isRightEdge: contentX >= nx + nw - 8 && nw >= 14 }
-      }
-    }
-    return null
-  }
-
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>): void => {
     if (!track) return
     const { viewX, viewY, contentX, contentY } = getPointerCoords(e)
 
-    // Sticky top ruler click -> seek playhead
     if (viewY < RULER_HEIGHT && viewX >= KEY_COL_WIDTH) {
-      const tick = floorTickToGrid(contentXToTick(contentX), gridDivision)
-      audioEngine.seek(tick)
+      audioEngine.seek(floorTickToGrid(contentXToTick(contentX, metrics), gridDivision))
       return
     }
-
-    // Sticky left key column click -> preview pitch
     if (viewX < KEY_COL_WIDTH && viewY >= RULER_HEIGHT) {
-      const pitch = contentYToPitch(contentY)
-      audioEngine.previewNote(track, pitch)
+      audioEngine.previewNote(track, contentYToPitch(contentY, metrics))
       return
     }
-
     if (viewY < RULER_HEIGHT) return
 
-    const hit = hitTestNote(track.notes, contentX, contentY)
+    const hit = hitTestNote(track.notes, contentX, contentY, metrics)
 
-    // Right-click deletes note
     if (e.button === 2) {
-      if (hit) {
-        deleteNote(track.id, hit.note.id)
-      }
+      if (hit) deleteNote(track.id, hit.note.id)
       return
     }
-
     if (e.button !== 0) return
 
     if (hit) {
@@ -270,9 +163,7 @@ export function PianoRoll() {
         nextSelected = [hit.note.id]
       }
       setSelectedNoteIds(nextSelected)
-      if (!isDrum) {
-        setLastNoteDurationTick(hit.note.durationTick)
-      }
+      if (!isDrum) setLastNoteDurationTick(hit.note.durationTick)
 
       if (hit.isRightEdge && !isDrum) {
         dragRef.current = { kind: 'resize', noteId: hit.note.id, origStart: hit.note.startTick }
@@ -292,7 +183,6 @@ export function PianoRoll() {
       return
     }
 
-    // Clicked empty grid cell
     if (toolMode === 'select' || e.shiftKey) {
       if (!e.shiftKey) setSelectedNoteIds([])
       dragRef.current = {
@@ -306,21 +196,18 @@ export function PianoRoll() {
       return
     }
 
-    // Draw mode: create note snapped to current grid division
     const step = getGridTickStep(gridDivision)
-    const startTick = Math.min(totalTicks - step, floorTickToGrid(contentXToTick(contentX), gridDivision))
-    const pitch = contentYToPitch(contentY)
-    const preferredDuration =
-      !isDrum && noteLengthMode === 'last-used' ? lastNoteDurationTick : step
-    const durationTick = Math.max(30, Math.min(totalTicks - startTick, preferredDuration))
-    const created = addNote(track.id, {
-      pitch,
-      startTick,
-      durationTick,
-      velocity: 0.8
-    })
+    const startTick = Math.min(
+      metrics.totalTicks - step,
+      floorTickToGrid(contentXToTick(contentX, metrics), gridDivision)
+    )
+    const pitch = contentYToPitch(contentY, metrics)
+    const preferredDuration = !isDrum && noteLengthMode === 'last-used' ? lastNoteDurationTick : step
+    const durationTick = Math.max(30, Math.min(metrics.totalTicks - startTick, preferredDuration))
+    const created = addNote(track.id, { pitch, startTick, durationTick, velocity: 0.8 })
     setSelectedNoteIds([created.id])
     audioEngine.previewNote(track, pitch, 0.18)
+
     if (!isDrum) {
       dragRef.current = {
         kind: 'create',
@@ -343,18 +230,15 @@ export function PianoRoll() {
 
     if (drag.kind === 'create' || drag.kind === 'resize') {
       if (drag.kind === 'create' && !drag.hasDragged) {
-        const curGridTick = floorTickToGrid(contentXToTick(contentX), gridDivision)
+        const curGridTick = floorTickToGrid(contentXToTick(contentX, metrics), gridDivision)
         const movedRightEnough = contentX - drag.startX >= CREATE_DRAG_THRESHOLD_PX
-        const enteredNextGrid = curGridTick > drag.anchorTick
-        if (!movedRightEnough || !enteredNextGrid) {
-          return
-        }
+        if (!movedRightEnough || curGridTick <= drag.anchorTick) return
         drag.hasDragged = true
       }
 
       const anchor = drag.kind === 'create' ? drag.anchorTick : drag.origStart
-      const endTick = Math.max(anchor + step, snapTick(contentXToTick(contentX), gridDivision))
-      const clampedDuration = Math.max(step, Math.min(totalTicks - anchor, endTick - anchor))
+      const endTick = Math.max(anchor + step, snapTick(contentXToTick(contentX, metrics), gridDivision))
+      const clampedDuration = Math.max(step, Math.min(metrics.totalTicks - anchor, endTick - anchor))
       const currentTrack = projectStore.getState().project.tracks.find((t) => t.id === track.id)
       if (currentTrack) {
         previewNotesRef.current = currentTrack.notes.map((n) =>
@@ -365,10 +249,8 @@ export function PianoRoll() {
     }
 
     if (drag.kind === 'move') {
-      const rawDeltaTick = (contentX - drag.startX) / pxPerTick
-      const deltaTick = Math.round(rawDeltaTick / step) * step
-      const deltaPitch = -Math.round((contentY - drag.startY) / rowHeight)
-
+      const deltaTick = Math.round((contentX - drag.startX) / metrics.pxPerTick / step) * step
+      const deltaPitch = -Math.round((contentY - drag.startY) / metrics.rowHeight)
       if (deltaTick !== drag.lastDeltaTick || deltaPitch !== drag.lastDeltaPitch) {
         drag.lastDeltaTick = deltaTick
         drag.lastDeltaPitch = deltaPitch
@@ -377,9 +259,9 @@ export function PianoRoll() {
           drag.selectedSet,
           deltaTick,
           deltaPitch,
-          minPitch,
-          maxPitch,
-          totalTicks
+          metrics.minPitch,
+          metrics.maxPitch,
+          metrics.totalTicks
         )
       }
       return
@@ -402,30 +284,26 @@ export function PianoRoll() {
       previewNotesRef.current
     ) {
       const target = previewNotesRef.current.find((n) => n.id === drag.noteId)
-      if (target) {
-        updateNote(track.id, drag.noteId, { durationTick: target.durationTick })
-      }
+      if (target) updateNote(track.id, drag.noteId, { durationTick: target.durationTick })
     } else if (
       drag.kind === 'move' &&
       previewNotesRef.current &&
       (drag.lastDeltaTick !== 0 || drag.lastDeltaPitch !== 0)
     ) {
       const state = projectStore.getState()
-      const nextProject = {
+      state.commitProjectSnapshot({
         ...state.project,
         tracks: state.project.tracks.map((t) =>
           t.id === track.id ? { ...t, notes: previewNotesRef.current! } : t
         )
-      }
-      state.commitProjectSnapshot(nextProject)
+      })
     } else if (drag.kind === 'marquee') {
-      const rect = {
-        minTick: contentXToTick(Math.min(drag.startX, drag.curX)),
-        maxTick: contentXToTick(Math.max(drag.startX, drag.curX)),
-        minPitch: contentYToPitch(Math.max(drag.startY, drag.curY)),
-        maxPitch: contentYToPitch(Math.min(drag.startY, drag.curY))
-      }
-      const found = findNotesInRect(track.notes, rect)
+      const found = findNotesInRect(track.notes, {
+        minTick: contentXToTick(Math.min(drag.startX, drag.curX), metrics),
+        maxTick: contentXToTick(Math.max(drag.startX, drag.curX), metrics),
+        minPitch: contentYToPitch(Math.max(drag.startY, drag.curY), metrics),
+        maxPitch: contentYToPitch(Math.min(drag.startY, drag.curY), metrics)
+      })
       setSelectedNoteIds(found)
     }
 
@@ -434,7 +312,6 @@ export function PianoRoll() {
     marqueeRef.current = null
   }
 
-  // Virtualized 60fps render loop: draws ONLY the visible viewport slice
   useEffect(() => {
     let rafId = 0
 
@@ -442,11 +319,9 @@ export function PianoRoll() {
       const canvas = canvasRef.current
       const scrollEl = scrollRef.current
       if (canvas && scrollEl && track) {
-        const viewW = viewport.width
-        const viewH = viewport.height
         const dpr = window.devicePixelRatio || 1
-        const targetW = Math.floor(viewW * dpr)
-        const targetH = Math.floor(viewH * dpr)
+        const targetW = Math.floor(viewport.width * dpr)
+        const targetH = Math.floor(viewport.height * dpr)
         if (canvas.width !== targetW || canvas.height !== targetH) {
           canvas.width = targetW
           canvas.height = targetH
@@ -454,254 +329,25 @@ export function PianoRoll() {
 
         const ctx = canvas.getContext('2d')
         if (ctx) {
-          const scrollLeft = scrollEl.scrollLeft
-          const scrollTop = scrollEl.scrollTop
-          const theme = themeRef.current
-          const trackColor = theme.trackPalette[track.colorIndex % 6] ?? '#3b6ea5'
-
-          const visibleStartTick = Math.max(0, scrollLeft / pxPerTick)
-          const visibleEndTick = Math.min(
-            totalTicks,
-            (scrollLeft + (viewW - KEY_COL_WIDTH)) / pxPerTick + 1
-          )
-          const visibleMaxPitch = Math.min(
-            maxPitch,
-            maxPitch - Math.floor(Math.max(0, scrollTop - RULER_HEIGHT) / rowHeight) + 1
-          )
-          const visibleMinPitch = Math.max(
-            minPitch,
-            maxPitch - Math.ceil((scrollTop + viewH) / rowHeight) - 1
-          )
-
           ctx.save()
           ctx.scale(dpr, dpr)
-
-          // 1. Background
-          ctx.fillStyle = theme.bgGrid
-          ctx.fillRect(0, 0, viewW, viewH)
-
-          // 2. Clipped grid & notes region
-          ctx.save()
-          ctx.beginPath()
-          ctx.rect(KEY_COL_WIDTH, RULER_HEIGHT, viewW - KEY_COL_WIDTH, viewH - RULER_HEIGHT)
-          ctx.clip()
-
-          // Visible pitch rows
-          for (let pitch = visibleMaxPitch; pitch >= visibleMinPitch; pitch--) {
-            const viewY = pitchToContentY(pitch) - scrollTop
-            const alt = isDrum ? pitch % 2 === 1 : isBlackKey(pitch)
-            if (alt) {
-              ctx.fillStyle = theme.rowAlt
-              ctx.fillRect(KEY_COL_WIDTH, viewY, viewW - KEY_COL_WIDTH, rowHeight)
-            }
-            ctx.strokeStyle = theme.lineSub
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(KEY_COL_WIDTH, viewY + rowHeight)
-            ctx.lineTo(viewW, viewY + rowHeight)
-            ctx.stroke()
-          }
-
-          // Visible vertical grid lines (including triplet divisions)
-          const step = getGridTickStep(gridDivision)
-          const firstTick = Math.max(0, Math.floor(visibleStartTick / step) * step)
-          const lastTick = Math.min(totalTicks, Math.ceil(visibleEndTick / step) * step)
-          for (let tick = firstTick; tick <= lastTick; tick += step) {
-            const viewX = Math.round(KEY_COL_WIDTH + tick * pxPerTick - scrollLeft) + 0.5
-            const isBar = tick % TICKS_PER_BAR === 0
-            const isBeat = tick % PPQN === 0
-            ctx.strokeStyle = isBar ? theme.lineBar : isBeat ? theme.lineBeat : theme.lineSub
-            ctx.lineWidth = isBar ? 1.25 : 1
-            ctx.beginPath()
-            ctx.moveTo(viewX, RULER_HEIGHT)
-            ctx.lineTo(viewX, viewH)
-            ctx.stroke()
-          }
-
-          // Subtle ghost notes from other synth tracks (culled to viewport)
-          if (!isDrum) {
-            for (const other of project.tracks) {
-              if (other.id === track.id || other.type !== 'synth') continue
-              const ghostColor = theme.trackPalette[other.colorIndex % 6] ?? '#888'
-              ctx.save()
-              ctx.fillStyle = ghostColor
-              ctx.globalAlpha = 0.14
-              for (const n of other.notes) {
-                if (
-                  n.pitch < visibleMinPitch ||
-                  n.pitch > visibleMaxPitch ||
-                  n.startTick + n.durationTick < visibleStartTick ||
-                  n.startTick > visibleEndTick
-                ) {
-                  continue
-                }
-                const nx = KEY_COL_WIDTH + n.startTick * pxPerTick - scrollLeft + 1
-                const ny = pitchToContentY(n.pitch) - scrollTop + 3
-                const nw = Math.max(6, n.durationTick * pxPerTick - 2)
-                drawRoundedRect(ctx, nx, ny, nw, rowHeight - 6, 3)
-                ctx.fill()
-              }
-              ctx.restore()
-            }
-          }
-
-          // Current track notes (culled to viewport)
-          const playheadTick = audioEngine.getCurrentTick()
-          const playing = audioEngine.getIsPlaying()
-          const notesToDraw = previewNotesRef.current ?? track.notes
-          const selectedSet = new Set(selectedNoteIds)
-
-          for (const n of notesToDraw) {
-            if (
-              n.pitch < visibleMinPitch ||
-              n.pitch > visibleMaxPitch ||
-              n.startTick + n.durationTick < visibleStartTick ||
-              n.startTick > visibleEndTick
-            ) {
-              continue
-            }
-            const nx = KEY_COL_WIDTH + n.startTick * pxPerTick - scrollLeft + 1
-            const ny = pitchToContentY(n.pitch) - scrollTop + 2
-            const nw = Math.max(10, n.durationTick * pxPerTick - 2)
-            const nh = rowHeight - 4
-            const isSelected = selectedSet.has(n.id)
-            const isHit =
-              playing && playheadTick >= n.startTick && playheadTick < n.startTick + n.durationTick
-
-            ctx.save()
-            ctx.fillStyle = trackColor
-            ctx.globalAlpha = isHit ? 1.0 : isSelected ? 0.96 : 0.82
-            drawRoundedRect(ctx, nx, ny, nw, nh, 4)
-            ctx.fill()
-
-            if (isSelected) {
-              ctx.strokeStyle = theme.textPrimary
-              ctx.lineWidth = 1.6
-              ctx.stroke()
-            } else if (isHit) {
-              ctx.strokeStyle = '#ffffff'
-              ctx.globalAlpha = 0.7
-              ctx.lineWidth = 1.4
-              ctx.stroke()
-            }
-            ctx.restore()
-          }
-
-          // Marquee selection box
-          if (marqueeRef.current) {
-            const m = marqueeRef.current
-            const rx = Math.min(m.x1, m.x2) - scrollLeft
-            const ry = Math.min(m.y1, m.y2) - scrollTop
-            const rw = Math.abs(m.x2 - m.x1)
-            const rh = Math.abs(m.y2 - m.y1)
-            ctx.fillStyle = theme.selectionFill
-            ctx.fillRect(rx, ry, rw, rh)
-            ctx.strokeStyle = theme.selectionBorder
-            ctx.lineWidth = 1
-            ctx.strokeRect(rx + 0.5, ry + 0.5, rw, rh)
-          }
-
-          // Playhead vertical line
-          const phViewX = KEY_COL_WIDTH + playheadTick * pxPerTick - scrollLeft
-          if (phViewX >= KEY_COL_WIDTH && phViewX <= viewW) {
-            ctx.strokeStyle = theme.playheadColor
-            ctx.lineWidth = 1.5
-            ctx.beginPath()
-            ctx.moveTo(phViewX, RULER_HEIGHT)
-            ctx.lineTo(phViewX, viewH)
-            ctx.stroke()
-          }
-
-          ctx.restore() // end grid clip
-
-          // 3. Sticky left keyboard / drum pad column (always pinned at x = 0)
-          ctx.save()
-          ctx.beginPath()
-          ctx.rect(0, RULER_HEIGHT, KEY_COL_WIDTH, viewH - RULER_HEIGHT)
-          ctx.clip()
-
-          ctx.fillStyle = theme.surface
-          ctx.fillRect(0, RULER_HEIGHT, KEY_COL_WIDTH, viewH - RULER_HEIGHT)
-          ctx.textBaseline = 'middle'
-
-          for (let pitch = visibleMaxPitch; pitch >= visibleMinPitch; pitch--) {
-            const viewY = pitchToContentY(pitch) - scrollTop
-            if (isDrum) {
-              const lane = DRUM_LANES.find((l) => l.pitch === pitch)
-              ctx.fillStyle = theme.textPrimary
-              ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
-              ctx.fillText(lane?.label ?? `Drum ${pitch}`, 10, viewY + rowHeight / 2)
-            } else {
-              const black = isBlackKey(pitch)
-              if (black) {
-                ctx.fillStyle = theme.rowAlt
-                ctx.fillRect(0, viewY, KEY_COL_WIDTH - 1, rowHeight)
-              }
-              const isC = pitch % 12 === 0
-              ctx.fillStyle = isC ? theme.textPrimary : theme.textMuted
-              ctx.font = isC ? '600 11px sans-serif' : '10px sans-serif'
-              if (isC || !black) {
-                ctx.fillText(midiToNoteName(pitch), 10, viewY + rowHeight / 2)
-              }
-            }
-            ctx.strokeStyle = theme.borderSubtle
-            ctx.lineWidth = 1
-            ctx.beginPath()
-            ctx.moveTo(0, viewY + rowHeight)
-            ctx.lineTo(KEY_COL_WIDTH, viewY + rowHeight)
-            ctx.stroke()
-          }
-          ctx.restore()
-
-          ctx.strokeStyle = theme.borderSubtle
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(KEY_COL_WIDTH - 0.5, 0)
-          ctx.lineTo(KEY_COL_WIDTH - 0.5, viewH)
-          ctx.stroke()
-
-          // 4. Sticky top ruler (always pinned at y = 0, only draws visible bar numbers)
-          ctx.fillStyle = theme.surface
-          ctx.fillRect(0, 0, viewW, RULER_HEIGHT)
-          ctx.strokeStyle = theme.borderSubtle
-          ctx.lineWidth = 1
-          ctx.beginPath()
-          ctx.moveTo(0, RULER_HEIGHT - 0.5)
-          ctx.lineTo(viewW, RULER_HEIGHT - 0.5)
-          ctx.stroke()
-
-          ctx.save()
-          ctx.beginPath()
-          ctx.rect(KEY_COL_WIDTH, 0, viewW - KEY_COL_WIDTH, RULER_HEIGHT)
-          ctx.clip()
-
-          ctx.fillStyle = theme.textSecondary
-          ctx.font = '11px -apple-system, BlinkMacSystemFont, sans-serif'
-          ctx.textBaseline = 'middle'
-          const firstBar = Math.max(0, Math.floor(visibleStartTick / TICKS_PER_BAR))
-          const lastBar = Math.min(project.bars - 1, Math.ceil(visibleEndTick / TICKS_PER_BAR))
-          for (let bar = firstBar; bar <= lastBar; bar++) {
-            const viewX = KEY_COL_WIDTH + bar * TICKS_PER_BAR * pxPerTick - scrollLeft
-            ctx.fillText(`${bar + 1}`, viewX + 6, RULER_HEIGHT / 2)
-          }
-
-          if (phViewX >= KEY_COL_WIDTH && phViewX <= viewW) {
-            ctx.fillStyle = theme.playheadColor
-            ctx.beginPath()
-            ctx.arc(phViewX, RULER_HEIGHT - 5, 3.5, 0, Math.PI * 2)
-            ctx.fill()
-          }
-          ctx.restore()
-
-          // Top-left corner cap
-          ctx.fillStyle = theme.surface
-          ctx.fillRect(0, 0, KEY_COL_WIDTH - 1, RULER_HEIGHT - 1)
-          ctx.strokeStyle = theme.borderSubtle
-          ctx.beginPath()
-          ctx.moveTo(KEY_COL_WIDTH - 0.5, 0)
-          ctx.lineTo(KEY_COL_WIDTH - 0.5, RULER_HEIGHT)
-          ctx.stroke()
-
+          renderPianoRollFrame({
+            ctx,
+            viewW: viewport.width,
+            viewH: viewport.height,
+            scrollLeft: scrollEl.scrollLeft,
+            scrollTop: scrollEl.scrollTop,
+            metrics,
+            project,
+            track,
+            notesToDraw: previewNotesRef.current ?? track.notes,
+            selectedNoteIds,
+            gridDivision,
+            playheadTick: audioEngine.getCurrentTick(),
+            isPlaying: audioEngine.getIsPlaying(),
+            marquee: marqueeRef.current,
+            theme: themeRef.current
+          })
           ctx.restore()
         }
       }
@@ -710,28 +356,14 @@ export function PianoRoll() {
 
     rafId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafId)
-  }, [
-    project,
-    track,
-    selectedNoteIds,
-    gridDivision,
-    activePackIds,
-    viewport,
-    maxPitch,
-    minPitch,
-    rowHeight,
-    pxPerTick,
-    totalTicks,
-    isDrum,
-    pitchToContentY
-  ])
+  }, [project, track, selectedNoteIds, gridDivision, activePackIds, viewport, metrics])
 
   return (
     <section className={styles.wrapper} data-testid="piano-roll">
       <div className={styles.scrollArea} ref={scrollRef}>
         <div
           className={styles.spacer}
-          style={{ width: contentWidth, height: contentHeight }}
+          style={{ width: metrics.contentWidth, height: metrics.contentHeight }}
         >
           <canvas
             ref={canvasRef}
