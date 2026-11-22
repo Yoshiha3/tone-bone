@@ -34,7 +34,13 @@ test.describe('Tone Bone Electron E2E', () => {
 
       await win.screenshot({ path: join(ARTIFACT_DIR, 'edit-minimal-light.png') })
 
-      // 2. BPM change (including intermediate single-digit typing like '1' -> '154' -> '124') & triplet grid
+      // 2. Project title edit, BPM change (including intermediate single-digit typing like '1' -> '154' -> '124') & triplet grid
+      const titleInput = win.getByTestId('project-title-input')
+      await expect(titleInput).toHaveValue('Simple Sketch')
+      await titleInput.fill('Evening Sketch')
+      await titleInput.press('Enter')
+      await expect(titleInput).toHaveValue('Evening Sketch')
+
       const bpmInput = win.getByTestId('bpm-input')
       await bpmInput.fill('1')
       await expect(bpmInput).toHaveValue('1')
@@ -100,6 +106,7 @@ test.describe('Tone Bone Electron E2E', () => {
       // 5. Switch to Stage Mode, capture screenshot, then return to Edit Mode
       await win.getByTestId('stage-mode-btn').click()
       await win.waitForSelector('[data-testid="stage-visualizer"]')
+      await expect(win.getByTestId('stage-visualizer')).toContainText('Evening Sketch')
       await win.getByTestId('stage-play-btn').click()
       await win.waitForTimeout(350)
       await win.screenshot({ path: join(ARTIFACT_DIR, 'stage-mode-light.png') })

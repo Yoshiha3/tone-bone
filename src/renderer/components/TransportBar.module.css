@@ -21,7 +21,30 @@
   font-size: 14px;
   letter-spacing: 0.02em;
   color: var(--text-primary);
-  margin-right: 6px;
+  white-space: nowrap;
+}
+
+input.titleInput {
+  width: 128px;
+  min-width: 84px;
+  height: 28px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+}
+
+input.titleInput:hover {
+  border-color: var(--border-subtle);
+  background: var(--bg-app);
+}
+
+input.titleInput:focus {
+  border-color: var(--accent-primary);
+  background: var(--bg-surface);
 }
 
 .playBtn {

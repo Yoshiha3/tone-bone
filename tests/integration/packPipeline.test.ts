@@ -58,6 +58,20 @@ describe('Resource Pack & Settings Pipeline (Integration)', () => {
     expect(document.documentElement.style.getPropertyValue('--accent-primary')).toBe('#22aa88')
     const styleEl = document.getElementById('tonebone-pack-override-css')
     expect(styleEl?.textContent).toContain('letter-spacing: 0.01em')
+
+    // Disabling a pack removes previously applied custom tokens not present in remaining packs
+    const withCustomToken = {
+      ...merged,
+      tokens: { ...merged.tokens, '--custom-ephemeral': '#ff00ff' }
+    }
+    applyPackTheme(withCustomToken, document)
+    expect(document.documentElement.style.getPropertyValue('--custom-ephemeral')).toBe('#ff00ff')
+
+    const darkOnly = mergeResourcePacks(packs, ['minimal-dark'])
+    applyPackTheme(darkOnly, document)
+    expect(document.documentElement.style.getPropertyValue('--custom-ephemeral')).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--font-ui')).toBe('')
+    expect(document.getElementById('tonebone-pack-override-css')?.textContent).toBe('')
   })
 
   it('persists workspace settings and creates projects/exports/packs folders', () => {

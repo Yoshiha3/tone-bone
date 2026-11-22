@@ -75,17 +75,23 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     store.getState().redo()
     expect(store.getState().project.tracks.find((t) => t.id === trackId)!.notes).toHaveLength(4)
 
-    // Modify BPM and Mute/Solo, then save via CodecRegistry -> MemoryPlatform
+    // Modify title, BPM, and Mute/Solo, then save via CodecRegistry -> MemoryPlatform
+    store.getState().setTitle('  Evening Flow  ')
+    expect(store.getState().project.title).toBe('Evening Flow')
+    store.getState().setTitle('   ') // empty title is ignored
+    expect(store.getState().project.title).toBe('Evening Flow')
     store.getState().setBpm(128)
     store.getState().toggleMute(trackId)
     expect(store.getState().isDirty).toBe(true)
 
-    // First save opens save dialog and records currentFilePath
+    // First save opens save dialog and records currentFilePath (using updated title)
     const saved = await store.getState().saveProject()
     expect(saved).toBe(true)
     expect(store.getState().isDirty).toBe(false)
     expect(platform.saveDialogCount).toBe(1)
     expect(platform.directWriteCount).toBe(0)
+    expect(platform.lastSavedProjectPath).toBe('/memory/ToneBone/projects/Evening Flow.json')
+    expect(platform.lastSavedProjectContent).toContain('"title": "Evening Flow"')
     expect(platform.lastSavedProjectContent).toContain('"bpm": 128')
 
     // Second save overwrites directly without opening save dialog
