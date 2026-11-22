@@ -1,5 +1,6 @@
-import { getAudibleTrackIds, secondsToTicks, ticksToSeconds } from '@core/musicMath'
+import { secondsToTicks, ticksToSeconds } from '@core/musicMath'
 import { TICKS_PER_BAR, type InstrumentDef, type Project, type Track } from '@core/types'
+import { collectScheduledNotes } from './scheduler'
 import type { NoteTriggerEvent } from './types'
 import { DrumVoice } from './voices/DrumVoice'
 import { SynthVoice } from './voices/SynthVoice'
@@ -17,9 +18,10 @@ export class AudioEngine {
   private isPlaying = false
   private timerId: ReturnType<typeof setInterval> | null = null
 
-  private currentTick = 0
+  /** Monotonic absolute ticks (never wrap backward while playing) */
+  private currentAbsTick = 0
   private lastTickUpdateTime = 0
-  private scheduledUntilTick = 0
+  private scheduledUntilAbsTick = 0
 
   private getProject: () => Project
   private getInstruments: () => readonly InstrumentDef[]
@@ -75,25 +77,28 @@ export class AudioEngine {
   }
 
   getCurrentTick(): number {
-    if (!this.isPlaying || !this.context) {
-      return this.currentTick
-    }
     const project = this.getProject()
     const totalTicks = project.bars * TICKS_PER_BAR
-    const elapsedSec = Math.max(0, this.context.currentTime - this.lastTickUpdateTime)
-    const nextTick = this.currentTick + secondsToTicks(elapsedSec, project.bpm)
+    if (totalTicks <= 0) return 0
 
-    if (project.loopEnabled && totalTicks > 0) {
-      return nextTick % totalTicks
+    let absTick = this.currentAbsTick
+    if (this.isPlaying && this.context) {
+      const elapsedSec = Math.max(0, this.context.currentTime - this.lastTickUpdateTime)
+      absTick += secondsToTicks(elapsedSec, project.bpm)
     }
-    return Math.min(totalTicks, nextTick)
+
+    if (project.loopEnabled) {
+      return ((absTick % totalTicks) + totalTicks) % totalTicks
+    }
+    return Math.min(totalTicks, absTick)
   }
 
   seek(tick: number): void {
     const project = this.getProject()
     const totalTicks = project.bars * TICKS_PER_BAR
-    this.currentTick = Math.max(0, Math.min(totalTicks, tick))
-    this.scheduledUntilTick = this.currentTick
+    const clamped = Math.max(0, Math.min(totalTicks, tick))
+    this.currentAbsTick = clamped
+    this.scheduledUntilAbsTick = clamped
     if (this.context) {
       this.lastTickUpdateTime = this.context.currentTime
     }
@@ -104,11 +109,15 @@ export class AudioEngine {
     const ctx = this.ensureContext()
     const project = this.getProject()
     const totalTicks = project.bars * TICKS_PER_BAR
-    if (this.currentTick >= totalTicks) {
-      this.currentTick = 0
+    if (totalTicks > 0) {
+      if (project.loopEnabled) {
+        this.currentAbsTick = ((this.currentAbsTick % totalTicks) + totalTicks) % totalTicks
+      } else if (this.currentAbsTick >= totalTicks) {
+        this.currentAbsTick = 0
+      }
     }
     this.lastTickUpdateTime = ctx.currentTime
-    this.scheduledUntilTick = this.currentTick
+    this.scheduledUntilAbsTick = this.currentAbsTick
     this.isPlaying = true
 
     this.scheduleLoop()
@@ -117,7 +126,8 @@ export class AudioEngine {
 
   pause(): void {
     if (!this.isPlaying) return
-    this.currentTick = this.getCurrentTick()
+    this.currentAbsTick = this.getCurrentTick()
+    this.scheduledUntilAbsTick = this.currentAbsTick
     this.isPlaying = false
     if (this.timerId !== null) {
       clearInterval(this.timerId)
@@ -127,8 +137,8 @@ export class AudioEngine {
 
   stop(): void {
     this.pause()
-    this.currentTick = 0
-    this.scheduledUntilTick = 0
+    this.currentAbsTick = 0
+    this.scheduledUntilAbsTick = 0
   }
 
   previewNote(track: Track, pitch: number, durationSeconds = 0.22): void {
@@ -171,94 +181,60 @@ export class AudioEngine {
     const totalTicks = project.bars * TICKS_PER_BAR
     if (totalTicks <= 0) return
 
-    // Advance reference position cleanly (keeps real-time BPM changes glitch-free)
     const now = ctx.currentTime
     const elapsedSec = Math.max(0, now - this.lastTickUpdateTime)
-    let playheadTick = this.currentTick + secondsToTicks(elapsedSec, project.bpm)
+    const playheadAbsTick = this.currentAbsTick + secondsToTicks(elapsedSec, project.bpm)
 
-    if (playheadTick >= totalTicks) {
-      if (project.loopEnabled) {
-        playheadTick = playheadTick % totalTicks
-        this.scheduledUntilTick = this.scheduledUntilTick % totalTicks
-      } else {
-        this.stop()
-        return
-      }
+    if (!project.loopEnabled && playheadAbsTick >= totalTicks) {
+      this.stop()
+      return
     }
 
-    this.currentTick = playheadTick
+    this.currentAbsTick = playheadAbsTick
     this.lastTickUpdateTime = now
 
     const lookaheadTicks = secondsToTicks(SCHEDULE_AHEAD_SEC, project.bpm)
-    const windowStart = this.scheduledUntilTick
-    const windowEnd = playheadTick + lookaheadTicks
+    const windowStartAbs = Math.max(this.scheduledUntilAbsTick, playheadAbsTick)
+    const windowEndAbs = playheadAbsTick + lookaheadTicks
 
-    this.scheduleTickRange(ctx, project, windowStart, windowEnd, now, playheadTick, totalTicks)
-    this.scheduledUntilTick = windowEnd >= totalTicks && project.loopEnabled
-      ? windowEnd % totalTicks
-      : windowEnd
-  }
+    if (windowEndAbs <= windowStartAbs) return
 
-  private scheduleTickRange(
-    ctx: AudioContext,
-    project: Project,
-    windowStart: number,
-    windowEnd: number,
-    now: number,
-    playheadTick: number,
-    totalTicks: number
-  ): void {
-    const audibleIds = getAudibleTrackIds(project.tracks)
+    const scheduled = collectScheduledNotes(project, windowStartAbs, windowEndAbs)
     const instruments = this.getInstruments()
 
-    const scheduleSegment = (segStart: number, segEnd: number, tickOffset: number): void => {
-      for (const track of project.tracks) {
-        if (!audibleIds.has(track.id) || track.volume <= 0.001) continue
-        const instrument = instruments.find((i) => i.id === track.instrumentId)
+    for (const item of scheduled) {
+      const deltaTicks = item.absTick - playheadAbsTick
+      const startTime = Math.max(now, now + ticksToSeconds(deltaTicks, project.bpm))
+      const durationSeconds = Math.max(0.03, ticksToSeconds(item.note.durationTick, project.bpm))
 
-        for (const note of track.notes) {
-          if (note.startTick >= segStart && note.startTick < segEnd) {
-            const deltaTicks = note.startTick + tickOffset - playheadTick
-            const startTime = Math.max(now, now + ticksToSeconds(deltaTicks, project.bpm))
-            const durationSeconds = Math.max(0.03, ticksToSeconds(note.durationTick, project.bpm))
+      const trackGain = ctx.createGain()
+      trackGain.gain.value = item.track.volume
+      trackGain.connect(this.masterGain)
 
-            const trackGain = ctx.createGain()
-            trackGain.gain.value = track.volume
-            trackGain.connect(this.masterGain!)
+      const instrument = instruments.find((i) => i.id === item.track.instrumentId)
+      const voice = item.track.type === 'drum' ? this.drumVoice : this.synthVoice
+      voice.trigger({
+        context: ctx,
+        destination: trackGain,
+        pitch: item.note.pitch,
+        startTime,
+        durationSeconds,
+        velocity: item.note.velocity,
+        instrument
+      })
 
-            const voice = track.type === 'drum' ? this.drumVoice : this.synthVoice
-            voice.trigger({
-              context: ctx,
-              destination: trackGain,
-              pitch: note.pitch,
-              startTime,
-              durationSeconds,
-              velocity: note.velocity,
-              instrument
-            })
-
-            const evt: NoteTriggerEvent = {
-              trackId: track.id,
-              colorIndex: track.colorIndex,
-              note,
-              scheduledTime: startTime
-            }
-            for (const listener of this.listeners) {
-              listener(evt)
-            }
-          }
-        }
+      const evt: NoteTriggerEvent = {
+        trackId: item.track.id,
+        colorIndex: item.track.colorIndex,
+        note: item.note,
+        scheduledTime: startTime
+      }
+      for (const listener of this.listeners) {
+        listener(evt)
       }
     }
 
-    if (windowEnd <= totalTicks) {
-      scheduleSegment(windowStart, windowEnd, 0)
-    } else if (project.loopEnabled) {
-      scheduleSegment(windowStart, totalTicks, 0)
-      scheduleSegment(0, windowEnd - totalTicks, totalTicks)
-    } else {
-      scheduleSegment(windowStart, totalTicks, 0)
-    }
+    this.scheduledUntilAbsTick = windowEndAbs
   }
 
   dispose(): void {
