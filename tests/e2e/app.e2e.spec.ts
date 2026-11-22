@@ -67,12 +67,15 @@ test.describe('Tone Bone Electron E2E', () => {
       await melodySolo.click()
       await melodySolo.click()
 
-      // 4. Place a note on the Piano Roll canvas and test Undo/Redo
+      // 4. Place a note with slight cursor drift (4px) and test Undo/Redo
       const canvas = win.getByTestId('piano-roll-canvas')
       const box = await canvas.boundingBox()
       expect(box).not.toBeNull()
       if (box) {
-        await win.mouse.click(box.x + 140, box.y + 120)
+        await win.mouse.move(box.x + 140, box.y + 120)
+        await win.mouse.down()
+        await win.mouse.move(box.x + 144, box.y + 122)
+        await win.mouse.up()
       }
       const undoBtn = win.getByTestId('undo-btn')
       const redoBtn = win.getByTestId('redo-btn')

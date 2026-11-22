@@ -19,12 +19,20 @@ const SYNTH_MIN_PITCH = 36 // C2
 const SYNTH_MAX_PITCH = 84 // C6
 const SYNTH_ROW_HEIGHT = 22
 const DRUM_ROW_HEIGHT = 38
+const CREATE_DRAG_THRESHOLD_PX = 8
 
 type ToolMode = 'draw' | 'select'
 
 type DragState =
   | { kind: 'none' }
-  | { kind: 'create'; noteId: string; anchorTick: number; pitch: number }
+  | {
+      kind: 'create'
+      noteId: string
+      anchorTick: number
+      pitch: number
+      startX: number
+      hasDragged: boolean
+    }
   | { kind: 'resize'; noteId: string; origStart: number }
   | {
       kind: 'move'
@@ -236,7 +244,14 @@ export function PianoRoll() {
     setSelectedNoteIds([created.id])
     audioEngine.previewNote(track, pitch, 0.18)
     if (!isDrum) {
-      dragRef.current = { kind: 'create', noteId: created.id, anchorTick: startTick, pitch }
+      dragRef.current = {
+        kind: 'create',
+        noteId: created.id,
+        anchorTick: startTick,
+        pitch,
+        startX: x,
+        hasDragged: false
+      }
     }
   }
 
@@ -249,6 +264,16 @@ export function PianoRoll() {
     const step = getGridTickStep(gridDivision)
 
     if (drag.kind === 'create' || drag.kind === 'resize') {
+      if (drag.kind === 'create' && !drag.hasDragged) {
+        const curGridTick = floorTickToGrid(xToTick(x), gridDivision)
+        const movedRightEnough = x - drag.startX >= CREATE_DRAG_THRESHOLD_PX
+        const enteredNextGrid = curGridTick > drag.anchorTick
+        if (!movedRightEnough || !enteredNextGrid) {
+          return
+        }
+        drag.hasDragged = true
+      }
+
       const anchor = drag.kind === 'create' ? drag.anchorTick : drag.origStart
       const endTick = Math.max(anchor + step, snapTick(xToTick(x), gridDivision))
       const clampedDuration = Math.max(step, Math.min(totalTicks - anchor, endTick - anchor))
@@ -295,7 +320,10 @@ export function PianoRoll() {
     const drag = dragRef.current
     if (drag.kind === 'none') return
 
-    if ((drag.kind === 'create' || drag.kind === 'resize') && previewNotesRef.current) {
+    if (
+      ((drag.kind === 'create' && drag.hasDragged) || drag.kind === 'resize') &&
+      previewNotesRef.current
+    ) {
       const target = previewNotesRef.current.find((n) => n.id === drag.noteId)
       if (target) {
         updateNote(track.id, drag.noteId, { durationTick: target.durationTick })
