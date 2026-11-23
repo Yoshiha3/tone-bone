@@ -7,8 +7,10 @@ files:
   - out/**/*
   - package.json
 extraResources:
-  - from: resources/packs
-    to: packs
+  - from: resources/themes
+    to: themes
+  - from: resources/sounds
+    to: sounds
 mac:
   category: public.app-category.music
   target:

@@ -1,4 +1,11 @@
-import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
+import {
+  DEFAULT_SOUND_PACK_ID,
+  DEFAULT_THEME_PACK_ID,
+  type AppSettings,
+  type ProjectSummary,
+  type SoundPack,
+  type ThemePack
+} from '@core/types'
 import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
 
 interface StoredMemoryProject {
@@ -45,20 +52,24 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
   saveDialogCount = 0
   directWriteCount = 0
   settings: AppSettings
-  packs: ResourcePack[]
+  themePacks: ThemePack[]
+  soundPacks: SoundPack[]
   private workspaceFiles = new Map<string, StoredMemoryProject>()
   private clock = 1_700_000_000_000
 
   constructor(
-    initialPacks: ResourcePack[] = [],
+    initialThemePacks: ThemePack[] = [],
+    initialSoundPacks: SoundPack[] = [],
     initialSettings: AppSettings = {
       workspaceDir: '/memory/ToneBone',
-      activePackIds: ['default-minimal'],
+      activeThemePackIds: [DEFAULT_THEME_PACK_ID],
+      activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
       noteLengthMode: 'last-used',
       saveMode: 'auto'
     }
   ) {
-    this.packs = initialPacks
+    this.themePacks = initialThemePacks
+    this.soundPacks = initialSoundPacks
     this.settings = initialSettings
   }
 
@@ -101,11 +112,19 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
   }
 
   async loadSettings(): Promise<AppSettings> {
-    return { ...this.settings, activePackIds: [...this.settings.activePackIds] }
+    return {
+      ...this.settings,
+      activeThemePackIds: [...this.settings.activeThemePackIds],
+      activeSoundPackIds: [...this.settings.activeSoundPackIds]
+    }
   }
 
   async saveSettings(settings: AppSettings): Promise<AppSettings> {
-    this.settings = { ...settings, activePackIds: [...settings.activePackIds] }
+    this.settings = {
+      ...settings,
+      activeThemePackIds: [...settings.activeThemePackIds],
+      activeSoundPackIds: [...settings.activeSoundPackIds]
+    }
     return this.loadSettings()
   }
 
@@ -117,8 +136,12 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     // No-op in memory adapter
   }
 
-  async listResourcePacks(): Promise<ResourcePack[]> {
-    return this.packs
+  async listThemePacks(): Promise<ThemePack[]> {
+    return this.themePacks
+  }
+
+  async listSoundPacks(): Promise<SoundPack[]> {
+    return this.soundPacks
   }
 
   async listWorkspaceProjects(): Promise<ProjectSummary[]> {

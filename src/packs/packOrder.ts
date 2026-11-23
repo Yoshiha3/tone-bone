@@ -1,10 +1,10 @@
-import type { ResourcePack } from '@core/types'
+import type { BasePack } from '@core/types'
 
-export interface DisplayOrderedPacks {
+export interface DisplayOrderedPacks<T extends BasePack> {
   /** Active packs ordered highest priority first (index 0 = top of list = highest override) */
-  active: ResourcePack[]
+  active: T[]
   /** Inactive packs ordered alphabetically by name */
-  inactive: ResourcePack[]
+  inactive: T[]
 }
 
 /**
@@ -12,13 +12,13 @@ export interface DisplayOrderedPacks {
  * Note: Internal `activePackIds` is stored in merge order (lowest -> highest),
  * so display order is the reverse of `activePackIds`.
  */
-export function getDisplayOrderedPacks(
-  allPacks: readonly ResourcePack[],
+export function getDisplayOrderedPacks<T extends BasePack>(
+  allPacks: readonly T[],
   activePackIds: readonly string[]
-): DisplayOrderedPacks {
+): DisplayOrderedPacks<T> {
   const byId = new Map(allPacks.map((p) => [p.meta.id, p]))
   const activeSet = new Set<string>()
-  const active: ResourcePack[] = []
+  const active: T[] = []
 
   // Reverse activePackIds so index 0 is highest priority (top of list)
   for (let i = activePackIds.length - 1; i >= 0; i--) {
@@ -40,11 +40,13 @@ export function getDisplayOrderedPacks(
 /**
  * Reorders `activePackIds` (merge order: lowest -> highest) based on a drag-and-drop
  * move in display order (index 0 = top = highest priority).
+ * If `pinnedBaseId` is provided, that pack always stays at the bottom (lowest priority).
  */
 export function reorderActivePacksByDisplayIndex(
   activePackIds: readonly string[],
   fromDisplayIndex: number,
-  toDisplayIndex: number
+  toDisplayIndex: number,
+  pinnedBaseId?: string
 ): string[] {
   const display = [...activePackIds].reverse()
   if (
@@ -53,6 +55,13 @@ export function reorderActivePacksByDisplayIndex(
     toDisplayIndex < 0 ||
     toDisplayIndex >= display.length ||
     fromDisplayIndex === toDisplayIndex
+  ) {
+    return [...activePackIds]
+  }
+
+  if (
+    pinnedBaseId &&
+    (display[fromDisplayIndex] === pinnedBaseId || display[toDisplayIndex] === pinnedBaseId)
   ) {
     return [...activePackIds]
   }

@@ -4,12 +4,22 @@ import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { getGridTickStep } from '@core/musicMath'
 import { MemoryPlatformAdapter } from '@platform/MemoryPlatformAdapter'
 import { createProjectStore } from '@renderer/store/useProjectStore'
-import { loadPacksFromDirectory } from '../../src/main/packRepository'
+import {
+  loadSoundPacksFromDirectory,
+  loadThemePacksFromDirectory
+} from '../../src/main/packRepository'
 
 describe('Store + Codec + Platform + Pack Integration Workflow', () => {
   it('handles full editing, triplet placement, batch move, copy/paste, undo/redo, and save/open round-trip', async () => {
-    const builtinPacks = loadPacksFromDirectory(resolve(__dirname, '../../resources/packs'), 'builtin')
-    const platform = new MemoryPlatformAdapter(builtinPacks)
+    const builtinThemes = loadThemePacksFromDirectory(
+      resolve(__dirname, '../../resources/themes'),
+      'builtin'
+    )
+    const builtinSounds = loadSoundPacksFromDirectory(
+      resolve(__dirname, '../../resources/sounds'),
+      'builtin'
+    )
+    const platform = new MemoryPlatformAdapter(builtinThemes, builtinSounds)
     let lastAppliedThemeBg = ''
 
     const store = createProjectStore({
@@ -23,10 +33,12 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     await store.getState().initialize()
     expect(lastAppliedThemeBg).toBe('#f6f7f9')
 
-    // Switch pack layering to Minimal Dark
-    await store.getState().setActivePackIds(['default-minimal', 'minimal-dark'])
+    // Switch theme to Minimal Dark alone (Minimal Light disabled) — all built-in sounds stay intact!
+    await store.getState().setActiveThemePackIds(['minimal-dark'])
     expect(lastAppliedThemeBg).toBe('#16191f')
-    expect(store.getState().mergedPacks.instruments.some((i) => i.id === 'glass-bell')).toBe(true)
+    expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'soft-sine')).toBe(true)
+    expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'glass-bell')).toBe(true)
+    expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'basic-kit')).toBe(true)
 
     // Add a new synth track, rename it, and place two 1/12 triplet notes
     store.getState().addTrack('synth')

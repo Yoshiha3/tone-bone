@@ -4,7 +4,7 @@ import { projectStore } from './store/useProjectStore'
 
 export const audioEngine = new AudioEngine(
   () => projectStore.getState().project,
-  () => projectStore.getState().mergedPacks.instruments
+  () => projectStore.getState().mergedSounds.instruments
 )
 
 export const wavExporter = new WavExporter()

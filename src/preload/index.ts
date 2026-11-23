@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AppSettings } from '@core/types'
+import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
 
 contextBridge.exposeInMainWorld('tonebone', {
   saveProjectFile: (suggestedName: string, content: string) =>
@@ -12,9 +12,10 @@ contextBridge.exposeInMainWorld('tonebone', {
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
   chooseWorkspaceDir: () => ipcRenderer.invoke('workspace:choose'),
-  openFolder: (target: 'workspace' | 'projects' | 'exports' | 'packs') =>
+  openFolder: (target: WorkspaceFolderTarget) =>
     ipcRenderer.invoke('workspace:openFolder', target),
-  listResourcePacks: () => ipcRenderer.invoke('packs:list'),
+  listThemePacks: () => ipcRenderer.invoke('packs:listThemes'),
+  listSoundPacks: () => ipcRenderer.invoke('packs:listSounds'),
   listWorkspaceProjects: () => ipcRenderer.invoke('projects:list'),
   readWorkspaceProject: (filePath: string) => ipcRenderer.invoke('projects:read', filePath),
   createWorkspaceProject: (baseTitle: string, content: string) =>

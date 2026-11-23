@@ -13,23 +13,28 @@ import {
 } from '@core/history'
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
 import {
+  DEFAULT_SOUND_PACK_ID,
+  DEFAULT_THEME_PACK_ID,
   DRUM_LANES,
   MAX_BARS,
   PPQN,
   TICKS_PER_BAR,
   type AppSettings,
   type GridDivision,
-  type MergedPackConfig,
+  type MergedSoundConfig,
+  type MergedThemeConfig,
   type Note,
   type NoteLengthMode,
   type Project,
   type ProjectSummary,
-  type ResourcePack,
   type SaveMode,
+  type SoundPack,
+  type ThemePack,
   type Track,
-  type TrackType
+  type TrackType,
+  type WorkspaceFolderTarget
 } from '@core/types'
-import { FALLBACK_VISUALIZER_PRESET, mergeResourcePacks } from '@packs/packMerger'
+import { FALLBACK_VISUALIZER_PRESET, mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
 import {
   createDefaultSaveStrategyRegistry,
   type SaveStrategyRegistry
@@ -69,21 +74,25 @@ export interface ProjectStoreState {
   isDirty: boolean
 
   settings: AppSettings
-  availablePacks: ResourcePack[]
-  mergedPacks: MergedPackConfig
+  availableThemePacks: ThemePack[]
+  mergedTheme: MergedThemeConfig
+  availableSoundPacks: SoundPack[]
+  mergedSounds: MergedSoundConfig
   workspaceProjects: ProjectSummary[]
   selectedHomeProjectPath: string | null
   unsavedPrompt: UnsavedChangesPrompt | null
 
   // Lifecycle & Platform
   initialize(): Promise<void>
-  reloadPacks(): Promise<void>
+  reloadThemePacks(): Promise<void>
+  reloadSoundPacks(): Promise<void>
   refreshWorkspaceProjects(): Promise<void>
-  setActivePackIds(packIds: string[]): Promise<void>
+  setActiveThemePackIds(packIds: string[]): Promise<void>
+  setActiveSoundPackIds(packIds: string[]): Promise<void>
   setNoteLengthMode(mode: NoteLengthMode): Promise<void>
   setSaveMode(mode: SaveMode): Promise<void>
   chooseWorkspaceDir(): Promise<void>
-  openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
+  openFolder(target: WorkspaceFolderTarget): Promise<void>
 
   // Home & Workspace project management
   setSelectedHomeProjectPath(filePath: string | null): void
@@ -149,14 +158,18 @@ export interface ProjectStoreDeps {
   platform: PlatformAdapter
   codecs: CodecRegistry
   saveStrategies?: SaveStrategyRegistry
-  onThemeChanged?: (merged: MergedPackConfig) => void
+  onThemeChanged?: (merged: MergedThemeConfig) => void
 }
 
-const INITIAL_MERGED: MergedPackConfig = {
-  activePackIds: ['default-minimal'],
+const INITIAL_MERGED_THEME: MergedThemeConfig = {
+  activeThemePackIds: [DEFAULT_THEME_PACK_ID],
   tokens: {},
   overrideCss: '',
-  visualizer: FALLBACK_VISUALIZER_PRESET,
+  visualizer: FALLBACK_VISUALIZER_PRESET
+}
+
+const INITIAL_MERGED_SOUNDS: MergedSoundConfig = {
+  activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
   instruments: [
     {
       id: 'soft-sine',
@@ -216,12 +229,15 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
       settings: {
         workspaceDir: '',
-        activePackIds: ['default-minimal'],
+        activeThemePackIds: [DEFAULT_THEME_PACK_ID],
+        activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
         noteLengthMode: 'last-used',
         saveMode: 'auto'
       },
-      availablePacks: [],
-      mergedPacks: INITIAL_MERGED,
+      availableThemePacks: [],
+      mergedTheme: INITIAL_MERGED_THEME,
+      availableSoundPacks: [],
+      mergedSounds: INITIAL_MERGED_SOUNDS,
       workspaceProjects: [],
       selectedHomeProjectPath: null,
       unsavedPrompt: null,
@@ -229,17 +245,27 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       async initialize() {
         try {
           const settings = await deps.platform.loadSettings()
-          const packs = await deps.platform.listResourcePacks()
-          const projects = await deps.platform.listWorkspaceProjects()
-          const merged = mergeResourcePacks(packs, settings.activePackIds)
+          const [themePacks, soundPacks, projects] = await Promise.all([
+            deps.platform.listThemePacks(),
+            deps.platform.listSoundPacks(),
+            deps.platform.listWorkspaceProjects()
+          ])
+          const mergedTheme = mergeThemePacks(themePacks, settings.activeThemePackIds)
+          const mergedSounds = mergeSoundPacks(soundPacks, settings.activeSoundPackIds)
           set({
-            settings: { ...settings, activePackIds: merged.activePackIds },
-            availablePacks: packs,
-            mergedPacks: merged,
+            settings: {
+              ...settings,
+              activeThemePackIds: mergedTheme.activeThemePackIds,
+              activeSoundPackIds: mergedSounds.activeSoundPackIds
+            },
+            availableThemePacks: themePacks,
+            mergedTheme,
+            availableSoundPacks: soundPacks,
+            mergedSounds,
             workspaceProjects: projects,
             selectedHomeProjectPath: projects[0]?.filePath ?? null
           })
-          deps.onThemeChanged?.(merged)
+          deps.onThemeChanged?.(mergedTheme)
         } catch (err) {
           set({
             statusMessage: `初期化エラー: ${err instanceof Error ? err.message : String(err)}`
@@ -247,16 +273,27 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         }
       },
 
-      async reloadPacks() {
-        const packs = await deps.platform.listResourcePacks()
+      async reloadThemePacks() {
+        const themePacks = await deps.platform.listThemePacks()
         const { settings } = get()
-        const merged = mergeResourcePacks(packs, settings.activePackIds)
+        const mergedTheme = mergeThemePacks(themePacks, settings.activeThemePackIds)
         set({
-          availablePacks: packs,
-          mergedPacks: merged,
-          statusMessage: 'リソースパックを再読み込みしました'
+          availableThemePacks: themePacks,
+          mergedTheme,
+          statusMessage: 'テーマパックを再読み込みしました'
         })
-        deps.onThemeChanged?.(merged)
+        deps.onThemeChanged?.(mergedTheme)
+      },
+
+      async reloadSoundPacks() {
+        const soundPacks = await deps.platform.listSoundPacks()
+        const { settings } = get()
+        const mergedSounds = mergeSoundPacks(soundPacks, settings.activeSoundPackIds)
+        set({
+          availableSoundPacks: soundPacks,
+          mergedSounds,
+          statusMessage: '音源パックを再読み込みしました'
+        })
       },
 
       async refreshWorkspaceProjects() {
@@ -276,16 +313,27 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         }
       },
 
-      async setActivePackIds(packIds) {
-        const { availablePacks, settings } = get()
-        const merged = mergeResourcePacks(availablePacks, packIds)
+      async setActiveThemePackIds(packIds) {
+        const { availableThemePacks, settings } = get()
+        const mergedTheme = mergeThemePacks(availableThemePacks, packIds)
         const nextSettings: AppSettings = {
           ...settings,
-          activePackIds: merged.activePackIds
+          activeThemePackIds: mergedTheme.activeThemePackIds
         }
         await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings, mergedPacks: merged })
-        deps.onThemeChanged?.(merged)
+        set({ settings: nextSettings, mergedTheme })
+        deps.onThemeChanged?.(mergedTheme)
+      },
+
+      async setActiveSoundPackIds(packIds) {
+        const { availableSoundPacks, settings } = get()
+        const mergedSounds = mergeSoundPacks(availableSoundPacks, packIds)
+        const nextSettings: AppSettings = {
+          ...settings,
+          activeSoundPackIds: mergedSounds.activeSoundPackIds
+        }
+        await deps.platform.saveSettings(nextSettings)
+        set({ settings: nextSettings, mergedSounds })
       },
 
       async setNoteLengthMode(mode) {
@@ -313,7 +361,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const nextSettings: AppSettings = { ...settings, workspaceDir: chosen }
         await deps.platform.saveSettings(nextSettings)
         set({ settings: nextSettings, statusMessage: '保存先フォルダを変更しました' })
-        await get().reloadPacks()
+        await get().reloadThemePacks()
+        await get().reloadSoundPacks()
         await get().refreshWorkspaceProjects()
       },
 
@@ -587,8 +636,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       toggleLoop: () => commit((p) => ({ ...p, loopEnabled: !p.loopEnabled })),
 
       addTrack: (type) => {
-        const { project, mergedPacks } = get()
-        const matchingInst = mergedPacks.instruments.find((i) => i.type === type)
+        const { project, mergedSounds } = get()
+        const matchingInst = mergedSounds.instruments.find((i) => i.type === type)
         const newTrack: Track = {
           id: createId('track'),
           name:

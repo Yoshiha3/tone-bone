@@ -18,7 +18,8 @@ test.describe('Tone Bone Electron E2E', () => {
       join(tempUserData, 'settings.json'),
       JSON.stringify({
         workspaceDir: tempWorkspace,
-        activePackIds: ['default-minimal'],
+        activeThemePackIds: ['minimal-light'],
+        activeSoundPackIds: ['default-sounds'],
         noteLengthMode: 'last-used',
         saveMode: 'auto'
       })
@@ -169,13 +170,20 @@ test.describe('Tone Bone Electron E2E', () => {
       const wsPath = await win.getByTestId('workspace-path').textContent()
       expect(wsPath).toBe(tempWorkspace)
 
-      await win.getByTestId('tab-packs').click()
-      await expect(win.getByTestId('pack-toggle-default-minimal')).toHaveAttribute('aria-checked', 'true')
-      await expect(win.getByTestId('pack-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'false')
-      await win.getByTestId('pack-toggle-minimal-dark').click()
+      await win.getByTestId('tab-themes').click()
+      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'false')
+      await win.getByTestId('theme-toggle-minimal-dark').click()
+      await win.getByTestId('theme-toggle-minimal-light').click()
       await win.waitForTimeout(200)
-      await expect(win.getByTestId('pack-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'true')
-      await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-packs.png') })
+      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute('aria-checked', 'false')
+      await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-themes.png') })
+
+      await win.getByTestId('tab-sounds').click()
+      await expect(win.getByTestId('sound-toggle-default-sounds')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('sound-toggle-default-sounds')).toBeDisabled()
+      await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-sounds.png') })
 
       const darkBg = await win.evaluate(() =>
         getComputedStyle(document.documentElement).getPropertyValue('--bg-app').trim()
@@ -184,6 +192,10 @@ test.describe('Tone Bone Electron E2E', () => {
 
       await win.getByTestId('settings-close-btn').click()
       await win.waitForTimeout(250)
+      // Verify standard synth & drum instruments remain intact even with Minimal Light disabled!
+      await expect(win.getByLabel('Main Lead 音色')).toContainText('Soft Sine')
+      await expect(win.getByLabel('Main Lead 音色')).toContainText('Glass Bell')
+      await expect(win.getByLabel('Rhythm 音色')).toContainText('Basic Rhythm Kit')
       await win.screenshot({ path: join(ARTIFACT_DIR, 'edit-minimal-dark.png') })
 
       // 8. Return to Home screen (auto-save flushes edits with no confirmation popup)

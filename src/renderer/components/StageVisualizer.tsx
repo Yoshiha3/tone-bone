@@ -14,21 +14,21 @@ export function StageVisualizer() {
   const project = useProjectStore((s) => s.project)
   const isPlaying = useProjectStore((s) => s.isPlaying)
   const setViewMode = useProjectStore((s) => s.setViewMode)
-  const preset = useProjectStore((s) => s.mergedPacks.visualizer)
-  const activePackIds = useProjectStore((s) => s.mergedPacks.activePackIds)
+  const preset = useProjectStore((s) => s.mergedTheme.visualizer)
+  const activeThemePackIds = useProjectStore((s) => s.mergedTheme.activeThemePackIds)
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const ripplesRef = useRef<ActiveRipple[]>([])
   const waveformRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(new ArrayBuffer(512)))
   const paletteRef = useRef<string[]>(readTrackPalette())
 
-  // Cache track colors whenever active resource packs change
+  // Cache track colors whenever active theme packs change
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       paletteRef.current = readTrackPalette()
     })
     return () => cancelAnimationFrame(raf)
-  }, [activePackIds])
+  }, [activeThemePackIds])
 
   // Spawn calm visual ripples whenever a note triggers
   useEffect(() => {
@@ -99,7 +99,7 @@ export function StageVisualizer() {
 
     rafId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafId)
-  }, [project, preset, activePackIds])
+  }, [project, preset, activeThemePackIds])
 
   return (
     <div className={styles.stage} data-testid="stage-visualizer">

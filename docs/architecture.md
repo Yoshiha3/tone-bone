@@ -31,7 +31,7 @@ flowchart TD
 | `src/core/` | 音楽ドメイン型・時間計算・編集ロジック・Undo/Redo（React / Electron / Web Audio 非依存） | `types.ts`, `musicMath.ts`, `history.ts`, `demoProject.ts` |
 | `src/codecs/` | プロジェクトの保存・読込フォーマット抽象（差し替え可能） | `types.ts`, `CodecRegistry.ts`, `SimpleJsonV1Codec.ts` |
 | `src/persistence/` | 保存方式（自動保存 / 手動保存）の差し替え可能な戦略モジュール | `types.ts`, `SaveStrategyRegistry.ts`, `DebouncedAutoSaveStrategy.ts`, `ManualSaveStrategy.ts` |
-| `src/packs/` | リソースパックの優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
+| `src/packs/` | テーマパック／音源パックの独立優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
 | `src/audio/` | `BaseAudioContext` 共通設計の音源・単調増加スケジューラ・WAV 書き出し | `scheduler.ts`, `AudioEngine.ts`, `voices/`, `exporters/` |
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
 | `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
@@ -71,7 +71,7 @@ flowchart TD
 
 ### ビジュアライザー演出を追加する（`VisualizerRenderer`）
 1. `src/visualizers/` に `VisualizerRenderer`（`id`, `name`, `render(ctx, frame, preset)`）を実装します。
-2. `src/visualizers/VisualizerRegistry.ts` の `createDefaultVisualizerRegistry()` に登録し、リソースパックの `visualizer/preset.json` で `"rendererId": "<登録したID>"` を指定すれば切り替えられます。
+2. `src/visualizers/VisualizerRegistry.ts` の `createDefaultVisualizerRegistry()` に登録し、テーマパックの `visualizer.json` で `"rendererId": "<登録したID>"` を指定すれば切り替えられます。
 
 ### 音声書き出し形式を追加する（`AudioExporter`）
 1. `src/audio/exporters/` に `AudioExporter`（`id`, `extension`, `export(project, instruments) => Promise<Uint8Array>`）を実装します。

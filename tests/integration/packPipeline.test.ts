@@ -3,12 +3,12 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { loadAllResourcePacks } from '../../src/main/packRepository'
+import { loadAllSoundPacks, loadAllThemePacks } from '../../src/main/packRepository'
 import { SettingsRepository } from '../../src/main/settingsRepository'
-import { mergeResourcePacks } from '@packs/packMerger'
+import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
 import { applyPackTheme } from '@packs/themeApplier'
 
-describe('Resource Pack & Settings Pipeline (Integration)', () => {
+describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
   const tempDirs: string[] = []
 
   afterEach(() => {
@@ -17,15 +17,15 @@ describe('Resource Pack & Settings Pipeline (Integration)', () => {
     }
   })
 
-  it('loads builtin + user packs from disk, merges layers, and applies CSS variables to DOM', () => {
+  it('loads builtin + user theme/sound packs independently so disabling Minimal Light preserves all sounds', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-pack-test-'))
     tempDirs.push(tempRoot)
 
-    // Create a user custom pack in temp workspace
-    const userPackDir = join(tempRoot, 'packs', 'custom-accent')
-    mkdirSync(join(userPackDir, 'theme'), { recursive: true })
+    // Create a user custom theme pack in themes/
+    const userThemeDir = join(tempRoot, 'themes', 'custom-accent')
+    mkdirSync(userThemeDir, { recursive: true })
     writeFileSync(
-      join(userPackDir, 'pack.json'),
+      join(userThemeDir, 'pack.json'),
       JSON.stringify({
         id: 'custom-accent',
         name: 'Custom Accent',
@@ -34,47 +34,82 @@ describe('Resource Pack & Settings Pipeline (Integration)', () => {
         description: 'Overrides only accent color'
       })
     )
+    writeFileSync(join(userThemeDir, 'tokens.json'), JSON.stringify({ '--accent-primary': '#22aa88' }))
+    writeFileSync(join(userThemeDir, 'override.css'), 'body { letter-spacing: 0.01em; }')
+
+    // Create a user custom sound pack in sounds/
+    const userSoundDir = join(tempRoot, 'sounds', 'retro-pack')
+    mkdirSync(userSoundDir, { recursive: true })
     writeFileSync(
-      join(userPackDir, 'theme', 'tokens.json'),
-      JSON.stringify({ '--accent-primary': '#22aa88' })
+      join(userSoundDir, 'pack.json'),
+      JSON.stringify({
+        id: 'retro-pack',
+        name: 'Retro Pack',
+        version: '0.1.0',
+        author: 'User',
+        description: 'Adds a chiptune synth'
+      })
     )
-    writeFileSync(join(userPackDir, 'theme', 'override.css'), 'body { letter-spacing: 0.01em; }')
-
-    const builtinDir = resolve(__dirname, '../../resources/packs')
-    const packs = loadAllResourcePacks(builtinDir, join(tempRoot, 'packs'))
-    expect(packs.map((p) => p.meta.id)).toEqual(
-      expect.arrayContaining(['default-minimal', 'minimal-dark', 'custom-accent'])
+    writeFileSync(
+      join(userSoundDir, 'instruments.json'),
+      JSON.stringify([
+        {
+          id: 'retro-pulse',
+          name: 'Retro Pulse',
+          type: 'synth',
+          synth: { waveform: 'square', attack: 0.004, decay: 0.1, sustain: 0.4, release: 0.1 }
+        }
+      ])
     )
 
-    const merged = mergeResourcePacks(packs, ['default-minimal', 'minimal-dark', 'custom-accent'])
-    expect(merged.tokens['--bg-app']).toBe('#16191f') // from minimal-dark
-    expect(merged.tokens['--accent-primary']).toBe('#22aa88') // overridden by custom-accent
-    expect(merged.instruments.some((i) => i.id === 'soft-sine')).toBe(true) // from default-minimal
-    expect(merged.instruments.some((i) => i.id === 'glass-bell')).toBe(true) // added by minimal-dark
+    const builtinThemesDir = resolve(__dirname, '../../resources/themes')
+    const builtinSoundsDir = resolve(__dirname, '../../resources/sounds')
 
-    applyPackTheme(merged, document)
+    const themes = loadAllThemePacks(builtinThemesDir, join(tempRoot, 'themes'))
+    expect(themes.map((p) => p.meta.id)).toEqual(
+      expect.arrayContaining(['minimal-light', 'minimal-dark', 'custom-accent'])
+    )
 
+    const sounds = loadAllSoundPacks(builtinSoundsDir, join(tempRoot, 'sounds'))
+    expect(sounds.map((p) => p.meta.id)).toEqual(
+      expect.arrayContaining(['default-sounds', 'retro-pack'])
+    )
+
+    // Activate Minimal Dark + Custom Accent (WITHOUT Minimal Light)
+    const mergedTheme = mergeThemePacks(themes, ['minimal-dark', 'custom-accent'])
+    expect(mergedTheme.tokens['--bg-app']).toBe('#16191f')
+    expect(mergedTheme.tokens['--accent-primary']).toBe('#22aa88')
+
+    // Sounds are completely independent and always retain default-sounds + user pack
+    const mergedSounds = mergeSoundPacks(sounds, ['retro-pack'])
+    expect(mergedSounds.activeSoundPackIds).toEqual(['default-sounds', 'retro-pack'])
+    expect(mergedSounds.instruments.some((i) => i.id === 'soft-sine')).toBe(true)
+    expect(mergedSounds.instruments.some((i) => i.id === 'glass-bell')).toBe(true)
+    expect(mergedSounds.instruments.some((i) => i.id === 'basic-kit')).toBe(true)
+    expect(mergedSounds.instruments.some((i) => i.id === 'retro-pulse')).toBe(true)
+
+    applyPackTheme(mergedTheme, document)
     expect(document.documentElement.style.getPropertyValue('--bg-app')).toBe('#16191f')
     expect(document.documentElement.style.getPropertyValue('--accent-primary')).toBe('#22aa88')
     const styleEl = document.getElementById('tonebone-pack-override-css')
     expect(styleEl?.textContent).toContain('letter-spacing: 0.01em')
 
-    // Disabling a pack removes previously applied custom tokens not present in remaining packs
+    // Disabling a theme pack removes previously applied custom tokens not present in remaining packs
     const withCustomToken = {
-      ...merged,
-      tokens: { ...merged.tokens, '--custom-ephemeral': '#ff00ff' }
+      ...mergedTheme,
+      tokens: { ...mergedTheme.tokens, '--custom-ephemeral': '#ff00ff' }
     }
     applyPackTheme(withCustomToken, document)
     expect(document.documentElement.style.getPropertyValue('--custom-ephemeral')).toBe('#ff00ff')
 
-    const darkOnly = mergeResourcePacks(packs, ['minimal-dark'])
+    const darkOnly = mergeThemePacks(themes, ['minimal-dark'])
     applyPackTheme(darkOnly, document)
     expect(document.documentElement.style.getPropertyValue('--custom-ephemeral')).toBe('')
     expect(document.documentElement.style.getPropertyValue('--font-ui')).toBe('')
     expect(document.getElementById('tonebone-pack-override-css')?.textContent).toBe('')
   })
 
-  it('persists workspace settings and creates projects/exports/packs folders', () => {
+  it('persists workspace settings, creates themes/sounds folders, and migrates legacy activePackIds', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-settings-test-'))
     tempDirs.push(tempRoot)
 
@@ -83,19 +118,32 @@ describe('Resource Pack & Settings Pipeline (Integration)', () => {
     const customWorkspace = join(tempRoot, 'CustomWorkspace')
     mkdirSync(userDataDir, { recursive: true })
 
+    // Simulate legacy settings.json with activePackIds: ['default-minimal', 'minimal-dark']
+    writeFileSync(
+      join(userDataDir, 'settings.json'),
+      JSON.stringify({
+        workspaceDir: defaultWorkspace,
+        activePackIds: ['default-minimal', 'minimal-dark'],
+        noteLengthMode: 'last-used'
+      })
+    )
+
     const repo = new SettingsRepository(userDataDir, defaultWorkspace)
-    const initial = repo.load()
-    expect(initial.workspaceDir).toBe(defaultWorkspace)
+    const migrated = repo.load()
+    expect(migrated.activeThemePackIds).toEqual(['minimal-light', 'minimal-dark'])
+    expect(migrated.activeSoundPackIds).toEqual(['default-sounds'])
 
     repo.save({
       workspaceDir: customWorkspace,
-      activePackIds: ['default-minimal', 'minimal-dark'],
+      activeThemePackIds: ['minimal-dark'],
+      activeSoundPackIds: ['default-sounds'],
       noteLengthMode: 'grid-step',
       saveMode: 'manual'
     })
     const reloaded = repo.load()
     expect(reloaded.workspaceDir).toBe(customWorkspace)
-    expect(reloaded.activePackIds).toEqual(['default-minimal', 'minimal-dark'])
+    expect(reloaded.activeThemePackIds).toEqual(['minimal-dark'])
+    expect(reloaded.activeSoundPackIds).toEqual(['default-sounds'])
     expect(reloaded.noteLengthMode).toBe('grid-step')
     expect(reloaded.saveMode).toBe('manual')
   })

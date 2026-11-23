@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { ResourcePack } from '@core/types'
+import type { BasePack } from '@core/types'
 import { getDisplayOrderedPacks, reorderActivePacksByDisplayIndex } from '@packs/packOrder'
 
-const makePack = (id: string, name: string): ResourcePack => ({
+const makePack = (id: string, name: string): BasePack => ({
   meta: { id, name, version: '1.0.0', author: 'Test', description: name },
   source: 'builtin',
-  path: `/${id}`,
-  tokens: {},
-  overrideCss: '',
-  instruments: []
+  path: `/${id}`
 })
 
 describe('packOrder', () => {
@@ -26,13 +23,21 @@ describe('packOrder', () => {
     expect(inactive.map((p) => p.meta.id)).toEqual(['alpha', 'zeta'])
   })
 
-  it('reorders activePackIds accurately from display drag indices', () => {
+  it('reorders activePackIds accurately from display drag indices and respects pinnedBaseId', () => {
     // Merge order: [base, dark, custom] -> Display order: [custom (0), dark (1), base (2)]
     const activeIds = ['base', 'dark', 'custom']
 
-    // Drag 'base' (display index 2) to top (display index 0)
-    // Expected display: [base, custom, dark] -> Expected merge: [dark, custom, base]
     const reordered = reorderActivePacksByDisplayIndex(activeIds, 2, 0)
     expect(reordered).toEqual(['dark', 'custom', 'base'])
+
+    // Moving pinned base (display index 2) or dropping onto pinned base is a no-op
+    expect(reorderActivePacksByDisplayIndex(activeIds, 2, 0, 'base')).toEqual(activeIds)
+    expect(reorderActivePacksByDisplayIndex(activeIds, 0, 2, 'base')).toEqual(activeIds)
+    // Moving non-pinned overlays relative to each other still succeeds
+    expect(reorderActivePacksByDisplayIndex(activeIds, 0, 1, 'base')).toEqual([
+      'base',
+      'custom',
+      'dark'
+    ])
   })
 })

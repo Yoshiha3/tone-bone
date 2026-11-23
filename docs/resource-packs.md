@@ -1,58 +1,55 @@
-# リソースパック作成ガイド
+# テーマパック＆音源パック作成ガイド
 
-Tone Bone は **Minecraft のリソースパック方式** で、見た目（配色・フォント・任意CSS）、Stage Mode の演出設定、および電子音シンセの音色を **フォルダを追加するだけで差し替え・重ね合わせ** できます。
+Tone Bone は **見た目（テーマパック）** と **音色（音源パック）** を独立したフォルダで管理し、Minecraft のリソースパックのように **フォルダを追加するだけで差し替え・重ね合わせ** できます。
+
+* 標準同梱パック（`Minimal Light` / `Minimal Dark` / `Default Electronic Kit`）はアプリ本体側に格納されており、ユーザー用フォルダ（`themes/`・`sounds/`）には表示されません（初期状態では空です）。
+* テーマを切り替えても音源には影響せず、標準ベース音源（`default-sounds`）は常に最下層で有効なため、曲の音色が欠損する心配がありません。
 
 ---
 
 ## 配置場所と適用方法
 
-1. アプリ内の **「設定 → リソースパック → パックフォルダを開く」** をクリックします（デフォルト：`~/Documents/ToneBone/packs/`）。
+1. アプリ内の **「設定 → テーマ → テーマフォルダを開く」**（デフォルト：`~/Documents/ToneBone/themes/`）または **「設定 → 音源パック → 音源フォルダを開く」**（デフォルト：`~/Documents/ToneBone/sounds/`）をクリックします。
 2. その中に好きな名前のフォルダを作成し、必要なファイルを配置します。
 3. アプリに戻り **「再読み込み」** をクリックして、トグルスイッチを ON にします。
 
 ### 優先順位（重ね合わせルール）
-- 設定画面の **「有効なパック（上が優先）」** リストで、**上にあるパックほど優先して下位のパックを部分上書き** します。
-- ドラッグ＆ドロップでいつでも優先順を並べ替えられます。
-- 変更したいファイルやトークンだけを書けば、未指定の項目は下位のベースパック（例：`Minimal Light`）の値がそのまま引き継がれます。
-- 標準同梱パック（例：`default-minimal`）と同じ `id` を持つユーザーパックを配置すると、同梱パックの定義そのものを置き換えることもできます。
+- 各タブの **「有効なパック（上が優先）」** リストで、**上にあるパックほど優先して下位のパックを部分上書き** します。
+- ドラッグ＆ドロップでいつでも優先順を並べ替えられます（音源パックの標準ベース `Default Electronic Kit` は常に最下層に固定されます）。
+- 変更したいファイルやトークンだけを書けば、未指定の項目は下位のパックや既定値がそのまま引き継がれます。
+- 標準同梱パック（例：`minimal-light`, `default-sounds`）と同じ `id` を持つユーザーパックを配置すると、同梱パックの定義そのものを置き換えることもできます（ユーザー側を削除すれば元に戻ります）。
 
 ---
 
-## フォルダ構成
+## テーマパックの構成（`themes/`）
 
-すべてのファイルのうち必須なのは `pack.json` のみです。その他はカスタマイズしたいものだけ配置してください。
+必須なのは `pack.json` のみです。その他はカスタマイズしたいものだけ配置してください。
 
 ```text
-my-custom-pack/
-├── pack.json                 # 【必須】パックのメタデータ
-├── theme/
-│   ├── tokens.json           # 【任意】CSS デザイントークンの上書き
-│   └── override.css          # 【任意】自由な追加・上書き CSS
-├── visualizer/
-│   └── preset.json           # 【任意】Stage Mode の演出設定
-└── sounds/
-    └── instruments.json      # 【任意】追加・上書きするシンセ音色定義
+themes/my-pastel-theme/
+├── pack.json         # 【必須】パックのメタデータ
+├── tokens.json       # 【任意】CSS デザイントークンの上書き
+├── override.css      # 【任意】自由な追加・上書き CSS
+└── visualizer.json   # 【任意】Stage Mode の演出設定
 ```
 
----
-
-## 各ファイルのリファレンス
+> 後方互換のため、`theme/tokens.json`・`theme/override.css`・`visualizer/preset.json` の配置も読み込み可能です。
 
 ### 1. `pack.json`（必須）
 
 ```json
 {
-  "id": "my-pastel-pack",
+  "id": "my-pastel-theme",
   "name": "My Pastel",
   "version": "1.0.0",
   "author": "Your Name",
-  "description": "Soft pastel colors with a bright chiptune lead."
+  "description": "Soft pastel colors for calm composing."
 }
 ```
 
 > 読み込み時に必須検証されるのは `id` と `name`（いずれも文字列）のみですが、`description` は設定画面の一覧に表示されるため、上記5項目すべてを記述することを推奨します。
 
-### 2. `theme/tokens.json`（任意・部分上書き可能）
+### 2. `tokens.json`（任意・部分上書き可能）
 
 | トークン名 | 用途 |
 | :--- | :--- |
@@ -72,7 +69,7 @@ my-custom-pack/
 | `--radius-sm` / `--radius-md` | 角丸サイズ |
 | `--font-ui` / `--font-mono` | UI フォント / 等幅フォント |
 
-例（アクセント色だけ差し替える最小パック）：
+例（アクセント色だけ差し替える最小テーマパック）：
 ```json
 {
   "--accent-primary": "#2f8f7b",
@@ -81,7 +78,7 @@ my-custom-pack/
 }
 ```
 
-### 3. `visualizer/preset.json`（任意・部分上書き可能）
+### 3. `visualizer.json`（任意・部分上書き可能）
 
 ```json
 {
@@ -95,9 +92,21 @@ my-custom-pack/
 }
 ```
 
-### 4. `sounds/instruments.json`（任意）
+---
 
-同じ `id` を書くと既存音色を上書きし、新しい `id` を書くと音色リストに追加されます。
+## 音源パックの構成（`sounds/`）
+
+```text
+sounds/my-chiptune-sounds/
+├── pack.json         # 【必須】パックのメタデータ
+└── instruments.json  # 【任意】追加・上書きするシンセ音色定義
+```
+
+> 後方互換のため、`sounds/instruments.json` の配置も読み込み可能です。
+
+### `instruments.json`
+
+同じ `id` を書くと標準音色（または下位パックの音色）を上書きし、新しい `id` を書くと音色リストに追加されます。
 
 ```json
 [

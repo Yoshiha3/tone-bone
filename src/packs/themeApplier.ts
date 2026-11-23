@@ -1,15 +1,15 @@
-import type { MergedPackConfig } from '@core/types'
+import type { MergedThemeConfig } from '@core/types'
 
 const OVERRIDE_STYLE_ID = 'tonebone-pack-override-css'
 const appliedTokenKeysByDoc = new WeakMap<Document, Set<string>>()
 
 /**
- * Applies merged resource pack tokens (CSS custom properties) and optional
+ * Applies merged theme pack tokens (CSS custom properties) and optional
  * override CSS to the given Document at runtime without rebuilding.
  * Previously applied tokens absent from the new config are removed so
  * CSS `:root` fallbacks take effect cleanly.
  */
-export function applyPackTheme(config: MergedPackConfig, doc: Document = document): void {
+export function applyPackTheme(config: MergedThemeConfig, doc: Document = document): void {
   const root = doc.documentElement
   const prevKeys = appliedTokenKeysByDoc.get(doc) ?? new Set<string>()
   const nextKeys = new Set<string>()

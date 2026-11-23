@@ -1,12 +1,17 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs'
 import { dirname, join } from 'path'
-import type { AppSettings } from '@core/types'
+import {
+  DEFAULT_SOUND_PACK_ID,
+  DEFAULT_THEME_PACK_ID,
+  type AppSettings
+} from '@core/types'
 
 export interface WorkspacePaths {
   root: string
   projects: string
   exports: string
-  packs: string
+  themes: string
+  sounds: string
 }
 
 export function getWorkspacePaths(workspaceDir: string): WorkspacePaths {
@@ -14,7 +19,8 @@ export function getWorkspacePaths(workspaceDir: string): WorkspacePaths {
     root: workspaceDir,
     projects: join(workspaceDir, 'projects'),
     exports: join(workspaceDir, 'exports'),
-    packs: join(workspaceDir, 'packs')
+    themes: join(workspaceDir, 'themes'),
+    sounds: join(workspaceDir, 'sounds')
   }
 }
 
@@ -23,8 +29,38 @@ export function ensureWorkspaceDirectories(workspaceDir: string): WorkspacePaths
   mkdirSync(paths.root, { recursive: true })
   mkdirSync(paths.projects, { recursive: true })
   mkdirSync(paths.exports, { recursive: true })
-  mkdirSync(paths.packs, { recursive: true })
+  mkdirSync(paths.themes, { recursive: true })
+  mkdirSync(paths.sounds, { recursive: true })
   return paths
+}
+
+interface LegacySettingsShape extends Partial<AppSettings> {
+  /** Legacy unified pack ID list migrated into activeThemePackIds */
+  activePackIds?: unknown
+}
+
+function normalizeThemePackIds(parsed: LegacySettingsShape): string[] {
+  if (Array.isArray(parsed.activeThemePackIds)) {
+    const valid = parsed.activeThemePackIds
+      .filter((x): x is string => typeof x === 'string')
+      .map((id) => (id === 'default-minimal' ? DEFAULT_THEME_PACK_ID : id))
+    if (valid.length > 0) return Array.from(new Set(valid))
+  }
+  if (Array.isArray(parsed.activePackIds)) {
+    const migrated = parsed.activePackIds
+      .filter((x): x is string => typeof x === 'string')
+      .map((id) => (id === 'default-minimal' ? DEFAULT_THEME_PACK_ID : id))
+    if (migrated.length > 0) return Array.from(new Set(migrated))
+  }
+  return [DEFAULT_THEME_PACK_ID]
+}
+
+function normalizeSoundPackIds(parsed: LegacySettingsShape): string[] {
+  const raw = Array.isArray(parsed.activeSoundPackIds)
+    ? parsed.activeSoundPackIds.filter((x): x is string => typeof x === 'string')
+    : []
+  const withoutBase = raw.filter((id) => id !== DEFAULT_SOUND_PACK_ID)
+  return [DEFAULT_SOUND_PACK_ID, ...Array.from(new Set(withoutBase))]
 }
 
 export class SettingsRepository {
@@ -39,7 +75,8 @@ export class SettingsRepository {
   load(): AppSettings {
     const defaults: AppSettings = {
       workspaceDir: this.defaultWorkspaceDir,
-      activePackIds: ['default-minimal'],
+      activeThemePackIds: [DEFAULT_THEME_PACK_ID],
+      activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
       noteLengthMode: 'last-used',
       saveMode: 'auto'
     }
@@ -49,16 +86,14 @@ export class SettingsRepository {
     }
     try {
       const raw = readFileSync(this.settingsFilePath, 'utf-8')
-      const parsed = JSON.parse(raw) as Partial<AppSettings>
+      const parsed = JSON.parse(raw) as LegacySettingsShape
       const settings: AppSettings = {
         workspaceDir:
           typeof parsed.workspaceDir === 'string' && parsed.workspaceDir.trim().length > 0
             ? parsed.workspaceDir
             : defaults.workspaceDir,
-        activePackIds:
-          Array.isArray(parsed.activePackIds) && parsed.activePackIds.length > 0
-            ? parsed.activePackIds.filter((x): x is string => typeof x === 'string')
-            : defaults.activePackIds,
+        activeThemePackIds: normalizeThemePackIds(parsed),
+        activeSoundPackIds: normalizeSoundPackIds(parsed),
         noteLengthMode:
           parsed.noteLengthMode === 'grid-step' || parsed.noteLengthMode === 'last-used'
             ? parsed.noteLengthMode

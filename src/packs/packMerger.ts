@@ -1,8 +1,12 @@
-import type {
-  InstrumentDef,
-  MergedPackConfig,
-  ResourcePack,
-  VisualizerPreset
+import {
+  DEFAULT_SOUND_PACK_ID,
+  DEFAULT_THEME_PACK_ID,
+  type InstrumentDef,
+  type MergedSoundConfig,
+  type MergedThemeConfig,
+  type SoundPack,
+  type ThemePack,
+  type VisualizerPreset
 } from '@core/types'
 
 export const FALLBACK_VISUALIZER_PRESET: VisualizerPreset = {
@@ -16,36 +20,39 @@ export const FALLBACK_VISUALIZER_PRESET: VisualizerPreset = {
 }
 
 /**
- * Merges active resource packs in order (like Minecraft resource pack layering).
- * Later packs in `activePackIds` override tokens, visualizer fields, and instruments
- * from earlier packs, while concatenating optional override CSS.
+ * Merges active theme packs in order (lowest -> highest priority).
+ * Later packs override CSS tokens and visualizer fields while concatenating override CSS.
  */
-export function mergeResourcePacks(
-  allPacks: readonly ResourcePack[],
-  activePackIds: readonly string[]
-): MergedPackConfig {
+export function mergeThemePacks(
+  allPacks: readonly ThemePack[],
+  activeThemePackIds: readonly string[],
+  fallbackThemeId = DEFAULT_THEME_PACK_ID
+): MergedThemeConfig {
   const byId = new Map(allPacks.map((p) => [p.meta.id, p]))
-  const orderedPacks: ResourcePack[] = []
+  const orderedPacks: ThemePack[] = []
+  const seen = new Set<string>()
 
-  for (const id of activePackIds) {
+  for (const id of activeThemePackIds) {
     const pack = byId.get(id)
-    if (pack) orderedPacks.push(pack)
+    if (pack && !seen.has(id)) {
+      orderedPacks.push(pack)
+      seen.add(id)
+    }
   }
 
-  // Always guarantee at least the first available pack if none matched
   if (orderedPacks.length === 0 && allPacks.length > 0) {
-    orderedPacks.push(allPacks[0])
+    const fallback = byId.get(fallbackThemeId) ?? allPacks[0]
+    orderedPacks.push(fallback)
   }
 
   const tokens: Record<string, string> = {}
   const cssParts: string[] = []
-  const instrumentMap = new Map<string, InstrumentDef>()
   let visualizer: VisualizerPreset = { ...FALLBACK_VISUALIZER_PRESET }
 
   for (const pack of orderedPacks) {
     Object.assign(tokens, pack.tokens)
     if (pack.overrideCss.trim().length > 0) {
-      cssParts.push(`/* Pack: ${pack.meta.id} */\n${pack.overrideCss}`)
+      cssParts.push(`/* Theme Pack: ${pack.meta.id} */\n${pack.overrideCss}`)
     }
     if (pack.visualizer) {
       visualizer = {
@@ -53,16 +60,57 @@ export function mergeResourcePacks(
         ...pack.visualizer
       }
     }
+  }
+
+  return {
+    activeThemePackIds: orderedPacks.map((p) => p.meta.id),
+    tokens,
+    overrideCss: cssParts.join('\n\n'),
+    visualizer
+  }
+}
+
+/**
+ * Merges active sound packs in order (lowest -> highest priority).
+ * When `baseSoundPackId` exists in `allPacks`, it is ALWAYS pinned as the lowest base layer
+ * so standard instruments and drum kits can never disappear when toggling packs or themes.
+ */
+export function mergeSoundPacks(
+  allPacks: readonly SoundPack[],
+  activeSoundPackIds: readonly string[],
+  baseSoundPackId = DEFAULT_SOUND_PACK_ID
+): MergedSoundConfig {
+  const byId = new Map(allPacks.map((p) => [p.meta.id, p]))
+  const orderedPacks: SoundPack[] = []
+  const seen = new Set<string>()
+
+  const basePack = byId.get(baseSoundPackId)
+  if (basePack) {
+    orderedPacks.push(basePack)
+    seen.add(basePack.meta.id)
+  }
+
+  for (const id of activeSoundPackIds) {
+    const pack = byId.get(id)
+    if (pack && !seen.has(id)) {
+      orderedPacks.push(pack)
+      seen.add(id)
+    }
+  }
+
+  if (orderedPacks.length === 0 && allPacks.length > 0) {
+    orderedPacks.push(allPacks[0])
+  }
+
+  const instrumentMap = new Map<string, InstrumentDef>()
+  for (const pack of orderedPacks) {
     for (const inst of pack.instruments) {
       instrumentMap.set(inst.id, inst)
     }
   }
 
   return {
-    activePackIds: orderedPacks.map((p) => p.meta.id),
-    tokens,
-    overrideCss: cssParts.join('\n\n'),
-    visualizer,
+    activeSoundPackIds: orderedPacks.map((p) => p.meta.id),
     instruments: Array.from(instrumentMap.values())
   }
 }

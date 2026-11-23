@@ -67,8 +67,8 @@ export async function requestOpenExternalProject(): Promise<boolean> {
 }
 
 export async function exportCurrentProjectWav(): Promise<boolean> {
-  const { project, mergedPacks } = projectStore.getState()
-  const wavBytes = await wavExporter.export(project, mergedPacks.instruments)
+  const { project, mergedSounds } = projectStore.getState()
+  const wavBytes = await wavExporter.export(project, mergedSounds.instruments)
   const fileName = `${sanitizeFileName(project.title)}.wav`
   const result = await defaultPlatform.saveWavFile(fileName, wavBytes)
   return !result.canceled

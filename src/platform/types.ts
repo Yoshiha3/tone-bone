@@ -1,4 +1,10 @@
-import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
+import type {
+  AppSettings,
+  ProjectSummary,
+  SoundPack,
+  ThemePack,
+  WorkspaceFolderTarget
+} from '@core/types'
 
 export interface SaveFileResult {
   canceled: boolean
@@ -19,8 +25,9 @@ export interface PlatformAdapter {
   loadSettings(): Promise<AppSettings>
   saveSettings(settings: AppSettings): Promise<AppSettings>
   chooseWorkspaceDir(): Promise<string | null>
-  openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
-  listResourcePacks(): Promise<ResourcePack[]>
+  openFolder(target: WorkspaceFolderTarget): Promise<void>
+  listThemePacks(): Promise<ThemePack[]>
+  listSoundPacks(): Promise<SoundPack[]>
   listWorkspaceProjects(): Promise<ProjectSummary[]>
   readWorkspaceProject(filePath: string): Promise<OpenFileResult>
   createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary>

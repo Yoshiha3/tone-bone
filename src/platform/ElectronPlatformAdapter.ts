@@ -1,30 +1,20 @@
-import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
+import type {
+  AppSettings,
+  ProjectSummary,
+  SoundPack,
+  ThemePack,
+  WorkspaceFolderTarget
+} from '@core/types'
 import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
 
 declare global {
   interface Window {
-    tonebone?: {
-      saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult>
-      writeProjectFile(filePath: string, content: string): Promise<SaveFileResult>
-      openProjectFile(): Promise<OpenFileResult>
-      saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult>
-      loadSettings(): Promise<AppSettings>
-      saveSettings(settings: AppSettings): Promise<AppSettings>
-      chooseWorkspaceDir(): Promise<string | null>
-      openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
-      listResourcePacks(): Promise<ResourcePack[]>
-      listWorkspaceProjects(): Promise<ProjectSummary[]>
-      readWorkspaceProject(filePath: string): Promise<OpenFileResult>
-      createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary>
-      renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary>
-      duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary>
-      deleteWorkspaceProject(filePath: string): Promise<void>
-    }
+    tonebone?: PlatformAdapter
   }
 }
 
 export class ElectronPlatformAdapter implements PlatformAdapter {
-  private get bridge() {
+  private get bridge(): PlatformAdapter {
     if (typeof window === 'undefined' || !window.tonebone) {
       throw new Error('Electron preload bridge (window.tonebone) is not available')
     }
@@ -59,12 +49,16 @@ export class ElectronPlatformAdapter implements PlatformAdapter {
     return this.bridge.chooseWorkspaceDir()
   }
 
-  openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void> {
+  openFolder(target: WorkspaceFolderTarget): Promise<void> {
     return this.bridge.openFolder(target)
   }
 
-  listResourcePacks(): Promise<ResourcePack[]> {
-    return this.bridge.listResourcePacks()
+  listThemePacks(): Promise<ThemePack[]> {
+    return this.bridge.listThemePacks()
+  }
+
+  listSoundPacks(): Promise<SoundPack[]> {
+    return this.bridge.listSoundPacks()
   }
 
   listWorkspaceProjects(): Promise<ProjectSummary[]> {

@@ -9,7 +9,7 @@ export function StorageSettingsTab() {
   return (
     <div className={styles.body}>
       <p className={styles.hint}>
-        曲ファイル（projects/）、書き出しWAV（exports/）、追加パック（packs/）の保存場所です。
+        曲ファイル（projects/）、書き出しWAV（exports/）、追加テーマ（themes/）、追加音源（sounds/）の保存場所です。
       </p>
       <div className={styles.pathBox} data-testid="workspace-path">
         {workspaceDir || '(未設定)'}

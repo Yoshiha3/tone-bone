@@ -14,7 +14,7 @@ import styles from './App.module.css'
 
 export function App() {
   const viewMode = useProjectStore((s) => s.viewMode)
-  const mergedPacks = useProjectStore((s) => s.mergedPacks)
+  const mergedTheme = useProjectStore((s) => s.mergedTheme)
   const statusMessage = useProjectStore((s) => s.statusMessage)
   const clearStatusMessage = useProjectStore((s) => s.clearStatusMessage)
 
@@ -23,8 +23,8 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    applyPackTheme(mergedPacks)
-  }, [mergedPacks])
+    applyPackTheme(mergedTheme)
+  }, [mergedTheme])
 
   useEffect(() => {
     if (!statusMessage) return

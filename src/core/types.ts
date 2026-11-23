@@ -104,6 +104,9 @@ export interface VisualizerPreset {
   showWaveform: boolean
 }
 
+export const DEFAULT_THEME_PACK_ID = 'minimal-light'
+export const DEFAULT_SOUND_PACK_ID = 'default-sounds'
+
 export interface PackMetadata {
   id: string
   name: string
@@ -112,23 +115,35 @@ export interface PackMetadata {
   description: string
 }
 
-export interface ResourcePack {
+export interface BasePack {
   meta: PackMetadata
   source: 'builtin' | 'user'
   path: string
+}
+
+export interface ThemePack extends BasePack {
   tokens: Record<string, string>
   overrideCss: string
   visualizer?: Partial<VisualizerPreset>
+}
+
+export interface SoundPack extends BasePack {
   instruments: InstrumentDef[]
 }
 
-export interface MergedPackConfig {
-  activePackIds: string[]
+export interface MergedThemeConfig {
+  activeThemePackIds: string[]
   tokens: Record<string, string>
   overrideCss: string
   visualizer: VisualizerPreset
+}
+
+export interface MergedSoundConfig {
+  activeSoundPackIds: string[]
   instruments: InstrumentDef[]
 }
+
+export type WorkspaceFolderTarget = 'workspace' | 'projects' | 'exports' | 'themes' | 'sounds'
 
 export type NoteLengthMode = 'last-used' | 'grid-step'
 
@@ -146,7 +161,8 @@ export interface ProjectSummary {
 
 export interface AppSettings {
   workspaceDir: string
-  activePackIds: string[]
+  activeThemePackIds: string[]
+  activeSoundPackIds: string[]
   noteLengthMode: NoteLengthMode
   saveMode: SaveMode
 }

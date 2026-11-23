@@ -1,8 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
-import type { AppSettings } from '@core/types'
-import { loadAllResourcePacks } from './packRepository'
+import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
+import { loadAllSoundPacks, loadAllThemePacks } from './packRepository'
 import {
   createUniqueProjectFile,
   deleteWorkspaceProjectFile,
@@ -13,11 +13,11 @@ import {
 } from './projectRepository'
 import { ensureWorkspaceDirectories, getWorkspacePaths, SettingsRepository } from './settingsRepository'
 
-function getBuiltinPacksDir(): string {
+function getBuiltinResourcesSubdir(subdir: 'themes' | 'sounds'): string {
   if (app.isPackaged) {
-    return join(process.resourcesPath, 'packs')
+    return join(process.resourcesPath, subdir)
   }
-  return join(app.getAppPath(), 'resources', 'packs')
+  return join(app.getAppPath(), 'resources', subdir)
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -72,27 +72,32 @@ function registerIpcHandlers(): void {
     return result.filePaths[0]
   })
 
-  ipcMain.handle(
-    'workspace:openFolder',
-    async (_event, target: 'workspace' | 'projects' | 'exports' | 'packs') => {
-      const current = settingsRepo.load()
-      const paths = ensureWorkspaceDirectories(current.workspaceDir)
-      const dir =
-        target === 'workspace'
-          ? paths.root
-          : target === 'projects'
-            ? paths.projects
-            : target === 'exports'
-              ? paths.exports
-              : paths.packs
-      await shell.openPath(dir)
-    }
-  )
-
-  ipcMain.handle('packs:list', () => {
+  ipcMain.handle('workspace:openFolder', async (_event, target: WorkspaceFolderTarget) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
-    return loadAllResourcePacks(getBuiltinPacksDir(), paths.packs)
+    const dir =
+      target === 'workspace'
+        ? paths.root
+        : target === 'projects'
+          ? paths.projects
+          : target === 'exports'
+            ? paths.exports
+            : target === 'themes'
+              ? paths.themes
+              : paths.sounds
+    await shell.openPath(dir)
+  })
+
+  ipcMain.handle('packs:listThemes', () => {
+    const current = settingsRepo.load()
+    const paths = ensureWorkspaceDirectories(current.workspaceDir)
+    return loadAllThemePacks(getBuiltinResourcesSubdir('themes'), paths.themes)
+  })
+
+  ipcMain.handle('packs:listSounds', () => {
+    const current = settingsRepo.load()
+    const paths = ensureWorkspaceDirectories(current.workspaceDir)
+    return loadAllSoundPacks(getBuiltinResourcesSubdir('sounds'), paths.sounds)
   })
 
   ipcMain.handle('project:save', async (_event, suggestedName: string, content: string) => {

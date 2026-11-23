@@ -56,7 +56,7 @@ export function PianoRoll() {
   const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
   const lastNoteDurationTick = useProjectStore((s) => s.lastNoteDurationTick)
   const setLastNoteDurationTick = useProjectStore((s) => s.setLastNoteDurationTick)
-  const activePackIds = useProjectStore((s) => s.mergedPacks.activePackIds)
+  const activeThemePackIds = useProjectStore((s) => s.mergedTheme.activeThemePackIds)
   const setSelectedNoteIds = useProjectStore((s) => s.setSelectedNoteIds)
   const addNote = useProjectStore((s) => s.addNote)
   const updateNote = useProjectStore((s) => s.updateNote)
@@ -100,13 +100,13 @@ export function PianoRoll() {
     return () => observer.disconnect()
   }, [])
 
-  // Refresh cached CSS theme tokens only when active resource packs change
+  // Refresh cached CSS theme tokens only when active theme packs change
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       themeRef.current = readThemeTokens()
     })
     return () => cancelAnimationFrame(raf)
-  }, [activePackIds])
+  }, [activeThemePackIds])
 
   // Center synth scroll around C4 when switching to a synth track
   useEffect(() => {
@@ -356,7 +356,7 @@ export function PianoRoll() {
 
     rafId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafId)
-  }, [project, track, selectedNoteIds, gridDivision, activePackIds, viewport, metrics])
+  }, [project, track, selectedNoteIds, gridDivision, activeThemePackIds, viewport, metrics])
 
   return (
     <section className={styles.wrapper} data-testid="piano-roll">

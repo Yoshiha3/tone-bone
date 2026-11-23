@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import { EditorSettingsTab } from './settings/EditorSettingsTab'
-import { PacksSettingsTab } from './settings/PacksSettingsTab'
+import { SoundPacksSettingsTab } from './settings/SoundPacksSettingsTab'
 import { StorageSettingsTab } from './settings/StorageSettingsTab'
+import { ThemeSettingsTab } from './settings/ThemeSettingsTab'
 import styles from './SettingsModal.module.css'
 
-type SettingsTabId = 'packs' | 'editor' | 'storage'
+type SettingsTabId = 'themes' | 'sounds' | 'editor' | 'storage'
 
 const TABS: readonly { id: SettingsTabId; label: string; testId: string }[] = [
-  { id: 'packs', label: 'リソースパック', testId: 'tab-packs' },
+  { id: 'themes', label: 'テーマ', testId: 'tab-themes' },
+  { id: 'sounds', label: '音源パック', testId: 'tab-sounds' },
   { id: 'editor', label: 'エディタ', testId: 'tab-editor' },
   { id: 'storage', label: '保存先フォルダ', testId: 'tab-storage' }
 ]
@@ -16,7 +18,7 @@ const TABS: readonly { id: SettingsTabId; label: string; testId: string }[] = [
 export function SettingsModal() {
   const open = useProjectStore((s) => s.settingsOpen)
   const setSettingsOpen = useProjectStore((s) => s.setSettingsOpen)
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('packs')
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('themes')
 
   if (!open) return null
 
@@ -52,7 +54,8 @@ export function SettingsModal() {
           ))}
         </div>
 
-        {activeTab === 'packs' && <PacksSettingsTab />}
+        {activeTab === 'themes' && <ThemeSettingsTab />}
+        {activeTab === 'sounds' && <SoundPacksSettingsTab />}
         {activeTab === 'editor' && <EditorSettingsTab />}
         {activeTab === 'storage' && <StorageSettingsTab />}
       </div>

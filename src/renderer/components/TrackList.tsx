@@ -5,7 +5,7 @@ import styles from './TrackList.module.css'
 export function TrackList() {
   const tracks = useProjectStore((s) => s.project.tracks)
   const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
-  const instruments = useProjectStore((s) => s.mergedPacks.instruments)
+  const instruments = useProjectStore((s) => s.mergedSounds.instruments)
   const setSelectedTrackId = useProjectStore((s) => s.setSelectedTrackId)
   const addTrack = useProjectStore((s) => s.addTrack)
   const removeTrack = useProjectStore((s) => s.removeTrack)
