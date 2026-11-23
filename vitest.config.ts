@@ -10,6 +10,7 @@ export default defineConfig({
       '@audio': resolve(__dirname, 'src/audio'),
       '@visualizers': resolve(__dirname, 'src/visualizers'),
       '@platform': resolve(__dirname, 'src/platform'),
+      '@persistence': resolve(__dirname, 'src/persistence'),
       '@renderer': resolve(__dirname, 'src/renderer')
     }
   },

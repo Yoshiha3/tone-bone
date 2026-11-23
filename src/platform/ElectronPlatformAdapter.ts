@@ -1,4 +1,4 @@
-import type { AppSettings, ResourcePack } from '@core/types'
+import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
 import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
 
 declare global {
@@ -13,6 +13,12 @@ declare global {
       chooseWorkspaceDir(): Promise<string | null>
       openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
       listResourcePacks(): Promise<ResourcePack[]>
+      listWorkspaceProjects(): Promise<ProjectSummary[]>
+      readWorkspaceProject(filePath: string): Promise<OpenFileResult>
+      createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary>
+      renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary>
+      duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary>
+      deleteWorkspaceProject(filePath: string): Promise<void>
     }
   }
 }
@@ -59,5 +65,29 @@ export class ElectronPlatformAdapter implements PlatformAdapter {
 
   listResourcePacks(): Promise<ResourcePack[]> {
     return this.bridge.listResourcePacks()
+  }
+
+  listWorkspaceProjects(): Promise<ProjectSummary[]> {
+    return this.bridge.listWorkspaceProjects()
+  }
+
+  readWorkspaceProject(filePath: string): Promise<OpenFileResult> {
+    return this.bridge.readWorkspaceProject(filePath)
+  }
+
+  createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary> {
+    return this.bridge.createWorkspaceProject(baseTitle, content)
+  }
+
+  renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary> {
+    return this.bridge.renameWorkspaceProject(filePath, newTitle)
+  }
+
+  duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary> {
+    return this.bridge.duplicateWorkspaceProject(filePath)
+  }
+
+  deleteWorkspaceProject(filePath: string): Promise<void> {
+    return this.bridge.deleteWorkspaceProject(filePath)
   }
 }

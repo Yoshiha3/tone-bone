@@ -132,8 +132,21 @@ export interface MergedPackConfig {
 
 export type NoteLengthMode = 'last-used' | 'grid-step'
 
+export type SaveMode = 'auto' | 'manual'
+
+export interface ProjectSummary {
+  filePath: string
+  fileName: string
+  title: string
+  bpm: number
+  bars: number
+  trackCount: number
+  updatedAtMs: number
+}
+
 export interface AppSettings {
   workspaceDir: string
   activePackIds: string[]
   noteLengthMode: NoteLengthMode
+  saveMode: SaveMode
 }

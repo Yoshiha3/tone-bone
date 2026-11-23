@@ -14,5 +14,14 @@ contextBridge.exposeInMainWorld('tonebone', {
   chooseWorkspaceDir: () => ipcRenderer.invoke('workspace:choose'),
   openFolder: (target: 'workspace' | 'projects' | 'exports' | 'packs') =>
     ipcRenderer.invoke('workspace:openFolder', target),
-  listResourcePacks: () => ipcRenderer.invoke('packs:list')
+  listResourcePacks: () => ipcRenderer.invoke('packs:list'),
+  listWorkspaceProjects: () => ipcRenderer.invoke('projects:list'),
+  readWorkspaceProject: (filePath: string) => ipcRenderer.invoke('projects:read', filePath),
+  createWorkspaceProject: (baseTitle: string, content: string) =>
+    ipcRenderer.invoke('projects:create', baseTitle, content),
+  renameWorkspaceProject: (filePath: string, newTitle: string) =>
+    ipcRenderer.invoke('projects:rename', filePath, newTitle),
+  duplicateWorkspaceProject: (filePath: string) =>
+    ipcRenderer.invoke('projects:duplicate', filePath),
+  deleteWorkspaceProject: (filePath: string) => ipcRenderer.invoke('projects:delete', filePath)
 })

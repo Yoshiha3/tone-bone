@@ -3,6 +3,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import type { AppSettings } from '@core/types'
 import { loadAllResourcePacks } from './packRepository'
+import {
+  createUniqueProjectFile,
+  deleteWorkspaceProjectFile,
+  duplicateWorkspaceProjectFile,
+  listWorkspaceProjects,
+  readWorkspaceProjectFile,
+  renameWorkspaceProjectFile
+} from './projectRepository'
 import { ensureWorkspaceDirectories, getWorkspacePaths, SettingsRepository } from './settingsRepository'
 
 function getBuiltinPacksDir(): string {
@@ -123,6 +131,35 @@ function registerIpcHandlers(): void {
     const filePath = result.filePaths[0]
     const content = readFileSync(filePath, 'utf-8')
     return { canceled: false, filePath, content }
+  })
+
+  ipcMain.handle('projects:list', () => {
+    const current = settingsRepo.load()
+    const paths = ensureWorkspaceDirectories(current.workspaceDir)
+    return listWorkspaceProjects(paths.projects)
+  })
+
+  ipcMain.handle('projects:read', (_event, filePath: string) => {
+    const { content } = readWorkspaceProjectFile(filePath)
+    return { canceled: false, filePath, content }
+  })
+
+  ipcMain.handle('projects:create', (_event, baseTitle: string, content: string) => {
+    const current = settingsRepo.load()
+    const paths = ensureWorkspaceDirectories(current.workspaceDir)
+    return createUniqueProjectFile(paths.projects, baseTitle, content)
+  })
+
+  ipcMain.handle('projects:rename', (_event, filePath: string, newTitle: string) => {
+    return renameWorkspaceProjectFile(filePath, newTitle)
+  })
+
+  ipcMain.handle('projects:duplicate', (_event, filePath: string) => {
+    return duplicateWorkspaceProjectFile(filePath)
+  })
+
+  ipcMain.handle('projects:delete', async (_event, filePath: string) => {
+    await deleteWorkspaceProjectFile(filePath, (p) => shell.trashItem(p))
   })
 
   ipcMain.handle('audio:saveWav', async (_event, suggestedName: string, bytes: Uint8Array) => {

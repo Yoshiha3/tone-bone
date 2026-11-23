@@ -23,11 +23,18 @@ import {
   type Note,
   type NoteLengthMode,
   type Project,
+  type ProjectSummary,
   type ResourcePack,
+  type SaveMode,
   type Track,
   type TrackType
 } from '@core/types'
 import { FALLBACK_VISUALIZER_PRESET, mergeResourcePacks } from '@packs/packMerger'
+import {
+  createDefaultSaveStrategyRegistry,
+  type SaveStrategyRegistry
+} from '@persistence/SaveStrategyRegistry'
+import type { LeaveDecision, SaveContext } from '@persistence/types'
 import { ElectronPlatformAdapter } from '@platform/ElectronPlatformAdapter'
 import type { PlatformAdapter } from '@platform/types'
 
@@ -36,7 +43,14 @@ function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${idCounter++}`
 }
 
-export type ViewMode = 'edit' | 'stage'
+export type ViewMode = 'home' | 'edit' | 'stage'
+
+export interface UnsavedChangesPrompt {
+  message: string
+  saveLabel: string
+  discardLabel: string
+  resolve: (decision: LeaveDecision) => void
+}
 
 export interface ProjectStoreState {
   history: HistoryStack<Project>
@@ -49,6 +63,7 @@ export interface ProjectStoreState {
   viewMode: ViewMode
   settingsOpen: boolean
   isPlaying: boolean
+  isAutoSaving: boolean
   statusMessage: string | null
   currentFilePath: string | null
   isDirty: boolean
@@ -56,15 +71,38 @@ export interface ProjectStoreState {
   settings: AppSettings
   availablePacks: ResourcePack[]
   mergedPacks: MergedPackConfig
+  workspaceProjects: ProjectSummary[]
+  selectedHomeProjectPath: string | null
+  unsavedPrompt: UnsavedChangesPrompt | null
 
   // Lifecycle & Platform
   initialize(): Promise<void>
   reloadPacks(): Promise<void>
+  refreshWorkspaceProjects(): Promise<void>
   setActivePackIds(packIds: string[]): Promise<void>
   setNoteLengthMode(mode: NoteLengthMode): Promise<void>
+  setSaveMode(mode: SaveMode): Promise<void>
   chooseWorkspaceDir(): Promise<void>
   openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
+
+  // Home & Workspace project management
+  setSelectedHomeProjectPath(filePath: string | null): void
+  openWorkspaceProject(filePath: string): Promise<boolean>
+  createWorkspaceProject(
+    template: 'empty' | 'demo',
+    options?: { openImmediately?: boolean }
+  ): Promise<ProjectSummary | null>
+  renameWorkspaceProject(filePath: string, newTitle: string): Promise<boolean>
+  duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary | null>
+  deleteWorkspaceProject(filePath: string): Promise<boolean>
+  requestLeaveDecision(prompt: Omit<UnsavedChangesPrompt, 'resolve'>): Promise<LeaveDecision>
+  resolveLeaveDecision(decision: LeaveDecision): void
+  prepareLeaveCurrentProject(askDecision: () => Promise<LeaveDecision>): Promise<boolean>
+  returnToHome(askDecision: () => Promise<LeaveDecision>): Promise<boolean>
+
+  // Direct save / open / new
   saveProject(): Promise<boolean>
+  saveProjectQuietly(): Promise<boolean>
   saveProjectAs(): Promise<boolean>
   openProject(): Promise<boolean>
   newProject(): void
@@ -110,6 +148,7 @@ export interface ProjectStoreState {
 export interface ProjectStoreDeps {
   platform: PlatformAdapter
   codecs: CodecRegistry
+  saveStrategies?: SaveStrategyRegistry
   onThemeChanged?: (merged: MergedPackConfig) => void
 }
 
@@ -131,13 +170,32 @@ const INITIAL_MERGED: MergedPackConfig = {
 
 export function createProjectStore(deps: ProjectStoreDeps) {
   const initialProject = createDemoProject()
+  const saveStrategies = deps.saveStrategies ?? createDefaultSaveStrategyRegistry()
 
   return createStore<ProjectStoreState>((set, get) => {
+    const createSaveContext = (askLeaveDecision: () => Promise<LeaveDecision>): SaveContext => ({
+      get hasFilePath() {
+        return Boolean(get().currentFilePath)
+      },
+      get isDirty() {
+        return get().isDirty
+      },
+      saveQuietly: () => get().saveProjectQuietly(),
+      saveExplicitly: () => get().saveProject(),
+      askLeaveDecision
+    })
+
+    const notifyProjectChanged = (): void => {
+      const strategy = saveStrategies.get(get().settings.saveMode)
+      strategy.onProjectChanged(() => createSaveContext(async () => 'cancel'))
+    }
+
     const commit = (updater: (prev: Project) => Project): void => {
       const state = get()
       const nextProject = updater(state.project)
       const nextHistory = pushHistory(state.history, nextProject)
       set({ history: nextHistory, project: nextProject, isDirty: true })
+      notifyProjectChanged()
     }
 
     return {
@@ -148,9 +206,10 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       clipboardNotes: [],
       gridDivision: '1/16',
       lastNoteDurationTick: PPQN / 2,
-      viewMode: 'edit',
+      viewMode: 'home',
       settingsOpen: false,
       isPlaying: false,
+      isAutoSaving: false,
       statusMessage: null,
       currentFilePath: null,
       isDirty: false,
@@ -158,20 +217,27 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       settings: {
         workspaceDir: '',
         activePackIds: ['default-minimal'],
-        noteLengthMode: 'last-used'
+        noteLengthMode: 'last-used',
+        saveMode: 'auto'
       },
       availablePacks: [],
       mergedPacks: INITIAL_MERGED,
+      workspaceProjects: [],
+      selectedHomeProjectPath: null,
+      unsavedPrompt: null,
 
       async initialize() {
         try {
           const settings = await deps.platform.loadSettings()
           const packs = await deps.platform.listResourcePacks()
+          const projects = await deps.platform.listWorkspaceProjects()
           const merged = mergeResourcePacks(packs, settings.activePackIds)
           set({
             settings: { ...settings, activePackIds: merged.activePackIds },
             availablePacks: packs,
-            mergedPacks: merged
+            mergedPacks: merged,
+            workspaceProjects: projects,
+            selectedHomeProjectPath: projects[0]?.filePath ?? null
           })
           deps.onThemeChanged?.(merged)
         } catch (err) {
@@ -185,8 +251,29 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const packs = await deps.platform.listResourcePacks()
         const { settings } = get()
         const merged = mergeResourcePacks(packs, settings.activePackIds)
-        set({ availablePacks: packs, mergedPacks: merged, statusMessage: 'リソースパックを再読み込みしました' })
+        set({
+          availablePacks: packs,
+          mergedPacks: merged,
+          statusMessage: 'リソースパックを再読み込みしました'
+        })
         deps.onThemeChanged?.(merged)
+      },
+
+      async refreshWorkspaceProjects() {
+        try {
+          const projects = await deps.platform.listWorkspaceProjects()
+          const currentSelected = get().selectedHomeProjectPath
+          const stillExists =
+            currentSelected !== null && projects.some((p) => p.filePath === currentSelected)
+          set({
+            workspaceProjects: projects,
+            selectedHomeProjectPath: stillExists ? currentSelected : (projects[0]?.filePath ?? null)
+          })
+        } catch (err) {
+          set({
+            statusMessage: `プロジェクト一覧の取得失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+        }
       },
 
       async setActivePackIds(packIds) {
@@ -208,6 +295,17 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         set({ settings: nextSettings })
       },
 
+      async setSaveMode(mode) {
+        saveStrategies.disposeAll()
+        const { settings } = get()
+        const nextSettings: AppSettings = { ...settings, saveMode: mode }
+        await deps.platform.saveSettings(nextSettings)
+        set({ settings: nextSettings })
+        if (mode === 'auto' && get().isDirty && get().currentFilePath) {
+          notifyProjectChanged()
+        }
+      },
+
       async chooseWorkspaceDir() {
         const chosen = await deps.platform.chooseWorkspaceDir()
         if (!chosen) return
@@ -216,13 +314,182 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         await deps.platform.saveSettings(nextSettings)
         set({ settings: nextSettings, statusMessage: '保存先フォルダを変更しました' })
         await get().reloadPacks()
+        await get().refreshWorkspaceProjects()
       },
 
       async openFolder(target) {
         await deps.platform.openFolder(target)
       },
 
+      setSelectedHomeProjectPath: (selectedHomeProjectPath) => set({ selectedHomeProjectPath }),
+
+      async openWorkspaceProject(filePath) {
+        saveStrategies.disposeAll()
+        try {
+          const result = await deps.platform.readWorkspaceProject(filePath)
+          if (result.canceled || !result.content) {
+            set({ statusMessage: 'プロジェクトを開けませんでした' })
+            return false
+          }
+          const { project } = deps.codecs.decodeAuto(result.content)
+          set({
+            history: createHistory(project),
+            project,
+            selectedTrackId: project.tracks[0]?.id ?? '',
+            selectedNoteIds: [],
+            clipboardNotes: [],
+            currentFilePath: result.filePath ?? filePath,
+            selectedHomeProjectPath: result.filePath ?? filePath,
+            isDirty: false,
+            viewMode: 'edit'
+          })
+          return true
+        } catch (err) {
+          set({
+            statusMessage: `読み込み失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+          return false
+        }
+      },
+
+      async createWorkspaceProject(template, options = { openImmediately: true }) {
+        try {
+          const draft = template === 'demo' ? createDemoProject() : createEmptyProject()
+          const encoded = deps.codecs.encodeDefault(draft)
+          const summary = await deps.platform.createWorkspaceProject(draft.title, encoded)
+          await get().refreshWorkspaceProjects()
+          set({ selectedHomeProjectPath: summary.filePath })
+
+          if (options.openImmediately) {
+            await get().openWorkspaceProject(summary.filePath)
+          } else {
+            set({ statusMessage: `「${summary.title}」を作成しました` })
+          }
+          return summary
+        } catch (err) {
+          set({
+            statusMessage: `作成失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+          return null
+        }
+      },
+
+      async renameWorkspaceProject(filePath, newTitle) {
+        try {
+          const updated = await deps.platform.renameWorkspaceProject(filePath, newTitle)
+          const { currentFilePath, project } = get()
+          if (currentFilePath === filePath) {
+            set({
+              currentFilePath: updated.filePath,
+              project: { ...project, title: updated.title }
+            })
+          }
+          await get().refreshWorkspaceProjects()
+          set({
+            selectedHomeProjectPath: updated.filePath,
+            statusMessage: `「${updated.title}」に名前を変更しました`
+          })
+          return true
+        } catch (err) {
+          set({
+            statusMessage: err instanceof Error ? err.message : String(err)
+          })
+          return false
+        }
+      },
+
+      async duplicateWorkspaceProject(filePath) {
+        try {
+          const copy = await deps.platform.duplicateWorkspaceProject(filePath)
+          await get().refreshWorkspaceProjects()
+          set({
+            selectedHomeProjectPath: copy.filePath,
+            statusMessage: `「${copy.title}」を複製しました`
+          })
+          return copy
+        } catch (err) {
+          set({
+            statusMessage: `複製失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+          return null
+        }
+      },
+
+      async deleteWorkspaceProject(filePath) {
+        try {
+          await deps.platform.deleteWorkspaceProject(filePath)
+          if (get().currentFilePath === filePath) {
+            set({ currentFilePath: null })
+          }
+          await get().refreshWorkspaceProjects()
+          set({ statusMessage: 'プロジェクトをゴミ箱へ移動しました' })
+          return true
+        } catch (err) {
+          set({
+            statusMessage: `削除失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+          return false
+        }
+      },
+
+      requestLeaveDecision(prompt) {
+        const existing = get().unsavedPrompt
+        if (existing) {
+          existing.resolve('cancel')
+        }
+        return new Promise<LeaveDecision>((resolve) => {
+          set({ unsavedPrompt: { ...prompt, resolve } })
+        })
+      },
+
+      resolveLeaveDecision(decision) {
+        const current = get().unsavedPrompt
+        if (!current) return
+        set({ unsavedPrompt: null })
+        current.resolve(decision)
+      },
+
+      async prepareLeaveCurrentProject(askDecision) {
+        const strategy = saveStrategies.get(get().settings.saveMode)
+        return strategy.prepareLeave(() => createSaveContext(askDecision))
+      },
+
+      async returnToHome(askDecision) {
+        const canLeave = await get().prepareLeaveCurrentProject(askDecision)
+        if (!canLeave) return false
+        const lastPath = get().currentFilePath
+        set({ viewMode: 'home', selectedNoteIds: [] })
+        await get().refreshWorkspaceProjects()
+        if (lastPath && get().workspaceProjects.some((p) => p.filePath === lastPath)) {
+          set({ selectedHomeProjectPath: lastPath })
+        }
+        return true
+      },
+
+      async saveProjectQuietly() {
+        const { project, currentFilePath } = get()
+        if (!currentFilePath) return false
+        set({ isAutoSaving: true })
+        try {
+          const encoded = deps.codecs.encodeDefault(project)
+          const result = await deps.platform.writeProjectFile(currentFilePath, encoded)
+          if (!result.canceled) {
+            set({ isDirty: false, isAutoSaving: false })
+            return true
+          }
+          set({ isAutoSaving: false })
+          return false
+        } catch (err) {
+          set({
+            isAutoSaving: false,
+            statusMessage: `自動保存失敗: ${err instanceof Error ? err.message : String(err)}`
+          })
+          return false
+        }
+      },
+
       async saveProject() {
+        saveStrategies.disposeAll()
         const { project, currentFilePath } = get()
         if (currentFilePath) {
           try {
@@ -242,6 +509,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       },
 
       async saveProjectAs() {
+        saveStrategies.disposeAll()
         const { project } = get()
         const safeName = (project.title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
         const encoded = deps.codecs.encodeDefault(project)
@@ -258,6 +526,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       },
 
       async openProject() {
+        saveStrategies.disposeAll()
         const result = await deps.platform.openProjectFile()
         if (result.canceled || !result.content) return false
         try {
@@ -267,8 +536,10 @@ export function createProjectStore(deps: ProjectStoreDeps) {
             project,
             selectedTrackId: project.tracks[0]?.id ?? '',
             selectedNoteIds: [],
+            clipboardNotes: [],
             currentFilePath: result.filePath ?? null,
             isDirty: false,
+            viewMode: 'edit',
             statusMessage: `「${project.title}」を読み込みました`
           })
           return true
@@ -281,6 +552,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       },
 
       newProject() {
+        saveStrategies.disposeAll()
         const fresh = createEmptyProject()
         set({
           history: createHistory(fresh),
@@ -290,6 +562,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
           clipboardNotes: [],
           currentFilePath: null,
           isDirty: false,
+          viewMode: 'edit',
           statusMessage: '新規プロジェクトを作成しました'
         })
       },
@@ -297,7 +570,8 @@ export function createProjectStore(deps: ProjectStoreDeps) {
       setViewMode: (viewMode) => set({ viewMode }),
       setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
       setGridDivision: (gridDivision) => set({ gridDivision }),
-      setLastNoteDurationTick: (ticks) => set({ lastNoteDurationTick: Math.max(30, Math.round(ticks)) }),
+      setLastNoteDurationTick: (ticks) =>
+        set({ lastNoteDurationTick: Math.max(30, Math.round(ticks)) }),
       setIsPlaying: (isPlaying) => set({ isPlaying }),
       setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId, selectedNoteIds: [] }),
       setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
@@ -317,7 +591,10 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const matchingInst = mergedPacks.instruments.find((i) => i.type === type)
         const newTrack: Track = {
           id: createId('track'),
-          name: type === 'drum' ? `Rhythm ${project.tracks.length + 1}` : `Synth ${project.tracks.length + 1}`,
+          name:
+            type === 'drum'
+              ? `Rhythm ${project.tracks.length + 1}`
+              : `Synth ${project.tracks.length + 1}`,
           type,
           instrumentId: matchingInst?.id ?? (type === 'drum' ? 'basic-kit' : 'soft-sine'),
           colorIndex: project.tracks.length % 6,
@@ -366,7 +643,9 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const track = get().project.tracks.find((t) => t.id === trackId)
         commit((p) => ({
           ...p,
-          tracks: p.tracks.map((t) => (t.id === trackId ? { ...t, notes: [...t.notes, note] } : t))
+          tracks: p.tracks.map((t) =>
+            t.id === trackId ? { ...t, notes: [...t.notes, note] } : t
+          )
         }))
         if (track?.type === 'synth') {
           set({ lastNoteDurationTick: Math.max(30, Math.round(note.durationTick)) })
@@ -430,7 +709,15 @@ export function createProjectStore(deps: ProjectStoreDeps) {
             t.id === selectedTrackId
               ? {
                   ...t,
-                  notes: moveNotes(t.notes, idSet, deltaTick, deltaPitch, minPitch, maxPitch, maxTicks)
+                  notes: moveNotes(
+                    t.notes,
+                    idSet,
+                    deltaTick,
+                    deltaPitch,
+                    minPitch,
+                    maxPitch,
+                    maxTicks
+                  )
                 }
               : t
           )
@@ -471,6 +758,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         const state = get()
         const nextHistory = pushHistory(state.history, nextProject)
         set({ history: nextHistory, project: nextProject, isDirty: true })
+        notifyProjectChanged()
       },
 
       undo: () => {
@@ -478,6 +766,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         if (!canUndo(history)) return
         const prev = undoHistory(history)
         set({ history: prev, project: prev.present, selectedNoteIds: [], isDirty: true })
+        notifyProjectChanged()
       },
 
       redo: () => {
@@ -485,6 +774,7 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         if (!canRedo(history)) return
         const next = redoHistory(history)
         set({ history: next, project: next.present, selectedNoteIds: [], isDirty: true })
+        notifyProjectChanged()
       },
 
       canUndo: () => canUndo(get().history),
@@ -495,10 +785,12 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
 export const defaultPlatform = new ElectronPlatformAdapter()
 export const defaultCodecRegistry = createDefaultCodecRegistry()
+export const defaultSaveStrategyRegistry = createDefaultSaveStrategyRegistry()
 
 export const projectStore = createProjectStore({
   platform: defaultPlatform,
-  codecs: defaultCodecRegistry
+  codecs: defaultCodecRegistry,
+  saveStrategies: defaultSaveStrategyRegistry
 })
 
 export function useProjectStore<T>(selector: (state: ProjectStoreState) => T): T {

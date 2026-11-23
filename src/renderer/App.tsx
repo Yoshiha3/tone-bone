@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import { applyPackTheme } from '@packs/themeApplier'
 import { requestNewProject, togglePlayPause } from './actions'
 import { audioEngine } from './audioContext'
+import { HomeView } from './components/HomeView'
 import { PianoRoll } from './components/PianoRoll'
 import { SettingsModal } from './components/SettingsModal'
 import { StageVisualizer } from './components/StageVisualizer'
 import { TrackList } from './components/TrackList'
 import { TransportBar } from './components/TransportBar'
+import { UnsavedChangesModal } from './components/UnsavedChangesModal'
 import { projectStore, useProjectStore } from './store/useProjectStore'
 import styles from './App.module.css'
 
@@ -30,6 +32,21 @@ export function App() {
     return () => clearTimeout(timer)
   }, [statusMessage, clearStatusMessage])
 
+  // Flush auto-save or guard unsaved changes before closing window
+  useEffect(() => {
+    const onBeforeUnload = (e: BeforeUnloadEvent): void => {
+      const state = projectStore.getState()
+      if (state.viewMode === 'home' || !state.isDirty) return
+      if (state.settings.saveMode === 'auto' && state.currentFilePath) {
+        void state.saveProjectQuietly()
+        return
+      }
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
+
   // Global keyboard shortcuts (cross-platform Cmd/Ctrl)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
@@ -43,18 +60,34 @@ export function App() {
       const mod = e.metaKey || e.ctrlKey
 
       if (e.key === 'Escape') {
-        if (state.settingsOpen) state.setSettingsOpen(false)
+        if (state.unsavedPrompt) state.resolveLeaveDecision('cancel')
+        else if (state.settingsOpen) state.setSettingsOpen(false)
         else if (state.viewMode === 'stage') state.setViewMode('edit')
         return
       }
 
-      if (isInput) return
+      if (isInput || state.settingsOpen || state.unsavedPrompt) return
+
+      if (state.viewMode === 'home') {
+        if (mod && e.key.toLowerCase() === 'n') {
+          e.preventDefault()
+          void requestNewProject()
+          return
+        }
+        if (e.key === 'Enter' && state.selectedHomeProjectPath) {
+          e.preventDefault()
+          void state.openWorkspaceProject(state.selectedHomeProjectPath)
+        }
+        return
+      }
 
       if (e.code === 'Space') {
         e.preventDefault()
         togglePlayPause()
         return
       }
+
+      if (state.viewMode !== 'edit') return
 
       if (mod && e.key.toLowerCase() === 'z') {
         e.preventDefault()
@@ -77,7 +110,7 @@ export function App() {
 
       if (mod && e.key.toLowerCase() === 'n') {
         e.preventDefault()
-        requestNewProject()
+        void requestNewProject()
         return
       }
 
@@ -100,7 +133,9 @@ export function App() {
 
   return (
     <div className={styles.shell}>
-      {viewMode === 'stage' ? (
+      {viewMode === 'home' ? (
+        <HomeView />
+      ) : viewMode === 'stage' ? (
         <StageVisualizer />
       ) : (
         <>
@@ -113,6 +148,7 @@ export function App() {
       )}
 
       <SettingsModal />
+      <UnsavedChangesModal />
 
       {statusMessage && (
         <div className={styles.toast} data-testid="status-toast">

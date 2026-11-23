@@ -40,7 +40,8 @@ export class SettingsRepository {
     const defaults: AppSettings = {
       workspaceDir: this.defaultWorkspaceDir,
       activePackIds: ['default-minimal'],
-      noteLengthMode: 'last-used'
+      noteLengthMode: 'last-used',
+      saveMode: 'auto'
     }
     if (!existsSync(this.settingsFilePath)) {
       ensureWorkspaceDirectories(defaults.workspaceDir)
@@ -61,7 +62,11 @@ export class SettingsRepository {
         noteLengthMode:
           parsed.noteLengthMode === 'grid-step' || parsed.noteLengthMode === 'last-used'
             ? parsed.noteLengthMode
-            : defaults.noteLengthMode
+            : defaults.noteLengthMode,
+        saveMode:
+          parsed.saveMode === 'auto' || parsed.saveMode === 'manual'
+            ? parsed.saveMode
+            : defaults.saveMode
       }
       ensureWorkspaceDirectories(settings.workspaceDir)
       return settings

@@ -127,4 +127,93 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(freshStore.getState().isDirty).toBe(false)
     expect(freshStore.getState().canUndo()).toBe(false)
   })
+
+  it('supports Home screen project management, auto-save flush, and manual-save discard guard', async () => {
+    const platform = new MemoryPlatformAdapter()
+    const store = createProjectStore({
+      platform,
+      codecs: createDefaultCodecRegistry()
+    })
+
+    await store.getState().initialize()
+    expect(store.getState().viewMode).toBe('home')
+    expect(store.getState().workspaceProjects).toHaveLength(0)
+
+    // Create a demo project in workspace without opening immediately
+    const demoSummary = await store
+      .getState()
+      .createWorkspaceProject('demo', { openImmediately: false })
+    expect(demoSummary).not.toBeNull()
+    expect(store.getState().viewMode).toBe('home')
+    expect(store.getState().workspaceProjects).toHaveLength(1)
+
+    // Rename on Home screen updates both filePath and JSON title
+    const renamed = await store
+      .getState()
+      .renameWorkspaceProject(demoSummary!.filePath, 'Sunset Groove')
+    expect(renamed).toBe(true)
+    const renamedSummary = store.getState().workspaceProjects[0]
+    expect(renamedSummary.title).toBe('Sunset Groove')
+    expect(renamedSummary.fileName).toBe('Sunset Groove.json')
+
+    // Duplicate & delete
+    const copy = await store.getState().duplicateWorkspaceProject(renamedSummary.filePath)
+    expect(copy?.title).toBe('Sunset Groove Copy')
+    expect(store.getState().workspaceProjects).toHaveLength(2)
+    await store.getState().deleteWorkspaceProject(copy!.filePath)
+    expect(store.getState().workspaceProjects).toHaveLength(1)
+
+    // Open project into Edit mode, edit BPM, and return to Home in auto-save mode (auto-flushes!)
+    expect(await store.getState().openWorkspaceProject(renamedSummary.filePath)).toBe(true)
+    expect(store.getState().viewMode).toBe('edit')
+    store.getState().setBpm(140)
+    expect(store.getState().isDirty).toBe(true)
+
+    let promptCalls = 0
+    const leftAuto = await store.getState().returnToHome(async () => {
+      promptCalls++
+      return 'cancel'
+    })
+    expect(leftAuto).toBe(true)
+    expect(promptCalls).toBe(0)
+    expect(store.getState().viewMode).toBe('home')
+    expect(store.getState().isDirty).toBe(false)
+    expect(store.getState().workspaceProjects[0].bpm).toBe(140)
+
+    // Switch to manual save mode: leaving while dirty supports cancel, discard, and save
+    await store.getState().setSaveMode('manual')
+    expect(await store.getState().openWorkspaceProject(renamedSummary.filePath)).toBe(true)
+    store.getState().setBpm(95)
+    expect(store.getState().isDirty).toBe(true)
+
+    const canceledLeave = await store.getState().returnToHome(async () => {
+      promptCalls++
+      return 'cancel'
+    })
+    expect(canceledLeave).toBe(false)
+    expect(promptCalls).toBe(1)
+    expect(store.getState().viewMode).toBe('edit')
+
+    const discardedLeave = await store.getState().returnToHome(async () => {
+      promptCalls++
+      return 'discard'
+    })
+    expect(discardedLeave).toBe(true)
+    expect(promptCalls).toBe(2)
+    expect(store.getState().viewMode).toBe('home')
+    // Unsaved change (95 BPM) was discarded so disk still holds 140 BPM
+    expect(store.getState().workspaceProjects[0].bpm).toBe(140)
+
+    // Choosing 'save' persists edits before returning to Home
+    expect(await store.getState().openWorkspaceProject(renamedSummary.filePath)).toBe(true)
+    store.getState().setBpm(152)
+    const savedLeave = await store.getState().returnToHome(async () => {
+      promptCalls++
+      return 'save'
+    })
+    expect(savedLeave).toBe(true)
+    expect(promptCalls).toBe(3)
+    expect(store.getState().viewMode).toBe('home')
+    expect(store.getState().workspaceProjects[0].bpm).toBe(152)
+  })
 })

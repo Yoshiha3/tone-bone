@@ -1,5 +1,42 @@
-import type { AppSettings, ResourcePack } from '@core/types'
+import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
 import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
+
+interface StoredMemoryProject {
+  content: string
+  updatedAtMs: number
+}
+
+function sanitizeFileName(raw: string): string {
+  const cleaned = raw.trim().replace(/[\\/:*?"<>|]/g, '_')
+  return cleaned.length > 0 ? cleaned : 'Untitled'
+}
+
+function summarizeMemoryProject(filePath: string, entry: StoredMemoryProject): ProjectSummary | null {
+  try {
+    const parsed = JSON.parse(entry.content) as Record<string, unknown>
+    if (
+      parsed.format !== 'tone-bone/v1' ||
+      typeof parsed.title !== 'string' ||
+      typeof parsed.bpm !== 'number' ||
+      typeof parsed.bars !== 'number' ||
+      !Array.isArray(parsed.tracks)
+    ) {
+      return null
+    }
+    const parts = filePath.split('/')
+    return {
+      filePath,
+      fileName: parts[parts.length - 1] ?? filePath,
+      title: parsed.title,
+      bpm: parsed.bpm,
+      bars: parsed.bars,
+      trackCount: parsed.tracks.length,
+      updatedAtMs: entry.updatedAtMs
+    }
+  } catch {
+    return null
+  }
+}
 
 export class MemoryPlatformAdapter implements PlatformAdapter {
   lastSavedProjectContent: string | null = null
@@ -9,17 +46,25 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
   directWriteCount = 0
   settings: AppSettings
   packs: ResourcePack[]
+  private workspaceFiles = new Map<string, StoredMemoryProject>()
+  private clock = 1_700_000_000_000
 
   constructor(
     initialPacks: ResourcePack[] = [],
     initialSettings: AppSettings = {
       workspaceDir: '/memory/ToneBone',
       activePackIds: ['default-minimal'],
-      noteLengthMode: 'last-used'
+      noteLengthMode: 'last-used',
+      saveMode: 'auto'
     }
   ) {
     this.packs = initialPacks
     this.settings = initialSettings
+  }
+
+  private nextTimestamp(): number {
+    this.clock += 1000
+    return this.clock
   }
 
   async saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult> {
@@ -27,6 +72,7 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     const filePath = `${this.settings.workspaceDir}/projects/${suggestedName}`
     this.lastSavedProjectPath = filePath
     this.lastSavedProjectContent = content
+    this.workspaceFiles.set(filePath, { content, updatedAtMs: this.nextTimestamp() })
     return { canceled: false, filePath }
   }
 
@@ -34,6 +80,7 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     this.directWriteCount++
     this.lastSavedProjectPath = filePath
     this.lastSavedProjectContent = content
+    this.workspaceFiles.set(filePath, { content, updatedAtMs: this.nextTimestamp() })
     return { canceled: false, filePath }
   }
 
@@ -72,5 +119,87 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
 
   async listResourcePacks(): Promise<ResourcePack[]> {
     return this.packs
+  }
+
+  async listWorkspaceProjects(): Promise<ProjectSummary[]> {
+    const prefix = `${this.settings.workspaceDir}/projects/`
+    const results: ProjectSummary[] = []
+    for (const [filePath, entry] of this.workspaceFiles.entries()) {
+      if (!filePath.startsWith(prefix)) continue
+      const summary = summarizeMemoryProject(filePath, entry)
+      if (summary) results.push(summary)
+    }
+    return results.sort((a, b) => b.updatedAtMs - a.updatedAtMs)
+  }
+
+  async readWorkspaceProject(filePath: string): Promise<OpenFileResult> {
+    const entry = this.workspaceFiles.get(filePath)
+    if (!entry) return { canceled: true }
+    return { canceled: false, filePath, content: entry.content }
+  }
+
+  async createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary> {
+    const base = baseTitle.trim() || 'Untitled'
+    const dir = `${this.settings.workspaceDir}/projects`
+    let title = base
+    let filePath = `${dir}/${sanitizeFileName(title)}.json`
+    for (let suffix = 2; this.workspaceFiles.has(filePath); suffix++) {
+      title = `${base} ${suffix}`
+      filePath = `${dir}/${sanitizeFileName(title)}.json`
+    }
+    const parsed = JSON.parse(content) as Record<string, unknown>
+    const updatedContent = JSON.stringify({ ...parsed, title }, null, 2) + '\n'
+    const entry = { content: updatedContent, updatedAtMs: this.nextTimestamp() }
+    this.workspaceFiles.set(filePath, entry)
+    this.lastSavedProjectPath = filePath
+    this.lastSavedProjectContent = updatedContent
+    return summarizeMemoryProject(filePath, entry)!
+  }
+
+  async renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary> {
+    const trimmed = newTitle.trim()
+    if (!trimmed) throw new Error('曲名を入力してください')
+    const existing = this.workspaceFiles.get(filePath)
+    if (!existing) throw new Error('対象のプロジェクトファイルが見つかりません')
+
+    const dir = filePath.slice(0, filePath.lastIndexOf('/'))
+    const targetPath = `${dir}/${sanitizeFileName(trimmed)}.json`
+    const isSame = filePath === targetPath
+    const isCaseOnly = !isSame && filePath.toLowerCase() === targetPath.toLowerCase()
+
+    if (!isSame && !isCaseOnly) {
+      for (const existingPath of this.workspaceFiles.keys()) {
+        if (existingPath.toLowerCase() === targetPath.toLowerCase()) {
+          throw new Error(`同名のプロジェクト「${trimmed}」がすでに存在します`)
+        }
+      }
+    }
+
+    const parsed = JSON.parse(existing.content) as Record<string, unknown>
+    const updatedContent = JSON.stringify({ ...parsed, title: trimmed }, null, 2) + '\n'
+    const entry = { content: updatedContent, updatedAtMs: this.nextTimestamp() }
+    if (!isSame) this.workspaceFiles.delete(filePath)
+    this.workspaceFiles.set(targetPath, entry)
+    if (this.lastSavedProjectPath === filePath) {
+      this.lastSavedProjectPath = targetPath
+      this.lastSavedProjectContent = updatedContent
+    }
+    return summarizeMemoryProject(targetPath, entry)!
+  }
+
+  async duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary> {
+    const existing = this.workspaceFiles.get(filePath)
+    if (!existing) throw new Error('対象のプロジェクトファイルが見つかりません')
+    const parsed = JSON.parse(existing.content) as Record<string, unknown>
+    const origTitle = typeof parsed.title === 'string' ? parsed.title : 'Untitled'
+    return this.createWorkspaceProject(`${origTitle} Copy`, existing.content)
+  }
+
+  async deleteWorkspaceProject(filePath: string): Promise<void> {
+    this.workspaceFiles.delete(filePath)
+    if (this.lastSavedProjectPath === filePath) {
+      this.lastSavedProjectPath = null
+      this.lastSavedProjectContent = null
+    }
   }
 }

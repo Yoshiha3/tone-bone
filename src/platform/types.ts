@@ -1,4 +1,4 @@
-import type { AppSettings, ResourcePack } from '@core/types'
+import type { AppSettings, ProjectSummary, ResourcePack } from '@core/types'
 
 export interface SaveFileResult {
   canceled: boolean
@@ -21,4 +21,10 @@ export interface PlatformAdapter {
   chooseWorkspaceDir(): Promise<string | null>
   openFolder(target: 'workspace' | 'projects' | 'exports' | 'packs'): Promise<void>
   listResourcePacks(): Promise<ResourcePack[]>
+  listWorkspaceProjects(): Promise<ProjectSummary[]>
+  readWorkspaceProject(filePath: string): Promise<OpenFileResult>
+  createWorkspaceProject(baseTitle: string, content: string): Promise<ProjectSummary>
+  renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary>
+  duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary>
+  deleteWorkspaceProject(filePath: string): Promise<void>
 }

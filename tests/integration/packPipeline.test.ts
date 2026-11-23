@@ -90,11 +90,13 @@ describe('Resource Pack & Settings Pipeline (Integration)', () => {
     repo.save({
       workspaceDir: customWorkspace,
       activePackIds: ['default-minimal', 'minimal-dark'],
-      noteLengthMode: 'grid-step'
+      noteLengthMode: 'grid-step',
+      saveMode: 'manual'
     })
     const reloaded = repo.load()
     expect(reloaded.workspaceDir).toBe(customWorkspace)
     expect(reloaded.activePackIds).toEqual(['default-minimal', 'minimal-dark'])
     expect(reloaded.noteLengthMode).toBe('grid-step')
+    expect(reloaded.saveMode).toBe('manual')
   })
 })

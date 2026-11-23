@@ -1,0 +1,73 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 18, 24, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+}
+
+.dialog {
+  width: 440px;
+  max-width: 90vw;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.actions {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancelBtn {
+  color: var(--text-secondary);
+}
+
+.discardBtn {
+  color: var(--danger);
+  border-color: var(--border-subtle);
+}
+
+.discardBtn:hover:not(:disabled) {
+  border-color: var(--danger);
+}
+
+.saveBtn {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--accent-contrast);
+  font-weight: 500;
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+}

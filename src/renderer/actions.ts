@@ -21,15 +21,49 @@ export function stopPlayback(): void {
   projectStore.getState().setIsPlaying(false)
 }
 
-export function requestNewProject(): boolean {
+export async function requestReturnToHome(): Promise<boolean> {
+  stopPlayback()
   const state = projectStore.getState()
-  if (state.isDirty) {
-    const ok = window.confirm('未保存の変更があります。破棄して新規プロジェクトを作成しますか？')
-    if (!ok) return false
+  return state.returnToHome(() =>
+    state.requestLeaveDecision({
+      message: `「${state.project.title}」に未保存の変更があります。ホーム画面へ戻る前に保存しますか？`,
+      saveLabel: '保存して戻る',
+      discardLabel: '保存せず戻る'
+    })
+  )
+}
+
+export async function requestNewProject(): Promise<boolean> {
+  const state = projectStore.getState()
+  if (state.viewMode !== 'home') {
+    const canLeave = await state.prepareLeaveCurrentProject(() =>
+      state.requestLeaveDecision({
+        message: `「${state.project.title}」に未保存の変更があります。新規プロジェクトを作成する前に保存しますか？`,
+        saveLabel: '保存して作成',
+        discardLabel: '保存せず作成'
+      })
+    )
+    if (!canLeave) return false
   }
   stopPlayback()
-  state.newProject()
-  return true
+  const created = await state.createWorkspaceProject('empty', { openImmediately: true })
+  return created !== null
+}
+
+export async function requestOpenExternalProject(): Promise<boolean> {
+  const state = projectStore.getState()
+  if (state.viewMode !== 'home') {
+    const canLeave = await state.prepareLeaveCurrentProject(() =>
+      state.requestLeaveDecision({
+        message: `「${state.project.title}」に未保存の変更があります。別のプロジェクトを開く前に保存しますか？`,
+        saveLabel: '保存して開く',
+        discardLabel: '保存せず開く'
+      })
+    )
+    if (!canLeave) return false
+  }
+  stopPlayback()
+  return state.openProject()
 }
 
 export async function exportCurrentProjectWav(): Promise<boolean> {

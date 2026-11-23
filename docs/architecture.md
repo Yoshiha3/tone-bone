@@ -8,11 +8,11 @@ Tone Bone は **「外側の UI・Electron ほど薄く、内側の純粋ドメ�
 
 ```mermaid
 flowchart TD
-    UI["UI Layer (src/renderer/components/)<br/>Transport / TrackList / PianoRoll / Stage / Settings"]
+    UI["UI Layer (src/renderer/components/)<br/>Home / Transport / TrackList / PianoRoll / Stage / Settings"]
     App["Application Layer (src/renderer/)<br/>actions.ts / audioContext.ts / useProjectStore / themeTokens"]
-    Mod["Pluggable Modules<br/>codecs / audio / visualizers / packs / platform"]
+    Mod["Pluggable Modules<br/>codecs / persistence / audio / visualizers / packs / platform"]
     Core["Domain Core (src/core/) — 外部依存ゼロ<br/>types / musicMath / history / demoProject"]
-    OS["Electron Main & Preload<br/>ファイルI/O / パック読込 / 設定永続化"]
+    OS["Electron Main & Preload<br/>ファイルI/O / プロジェクト管理 / パック読込 / 設定永続化"]
 
     UI --> App
     UI --> Mod
@@ -30,11 +30,12 @@ flowchart TD
 | :--- | :--- | :--- |
 | `src/core/` | 音楽ドメイン型・時間計算・編集ロジック・Undo/Redo（React / Electron / Web Audio 非依存） | `types.ts`, `musicMath.ts`, `history.ts`, `demoProject.ts` |
 | `src/codecs/` | プロジェクトの保存・読込フォーマット抽象（差し替え可能） | `types.ts`, `CodecRegistry.ts`, `SimpleJsonV1Codec.ts` |
+| `src/persistence/` | 保存方式（自動保存 / 手動保存）の差し替え可能な戦略モジュール | `types.ts`, `SaveStrategyRegistry.ts`, `DebouncedAutoSaveStrategy.ts`, `ManualSaveStrategy.ts` |
 | `src/packs/` | リソースパックの優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
 | `src/audio/` | `BaseAudioContext` 共通設計の音源・単調増加スケジューラ・WAV 書き出し | `scheduler.ts`, `AudioEngine.ts`, `voices/`, `exporters/` |
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
 | `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
-| `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・設定/パック永続化 | `main/index.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
+| `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・プロジェクト/設定/パック永続化 | `main/index.ts`, `projectRepository.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
 | `src/renderer/` | 薄い React UI・アプリ操作窓口・状態ストア | `actions.ts`, `audioContext.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `components/` |
 
 ---
@@ -63,6 +64,10 @@ flowchart TD
 1. `src/codecs/` に `ProjectCodec`（`id`, `label`, `extensions`, `canDecode`, `encode`, `decode`）を実装したクラスを追加します。
 2. `src/codecs/CodecRegistry.ts` の `createDefaultCodecRegistry()` で `registry.register(new MyCodec(), true)` のように登録します（第2引数 `true` でデフォルト保存形式を差し替え可能。旧形式も登録したままなら `decodeAuto()` で自動判別して開けます）。
    > **現在の制約**：保存時の初期拡張子（`src/renderer/store/useProjectStore.ts`）と Electron のファイル選択ダイアログのフィルタ（`src/main/index.ts`）は現在 `.json` 固定となっています。`.json` 以外の拡張子を使うコーデックを追加する場合は、これらの箇所も併せて更新する必要があります。
+
+### 保存方式を追加・差し替える（`SaveStrategy`）
+1. `src/persistence/` に `SaveStrategy`（`id`, `label`, `onProjectChanged`, `prepareLeave`, `dispose`）を実装したクラスを追加します（例：世代バックアップ付き保存やクラウド同期など）。
+2. `src/persistence/SaveStrategyRegistry.ts` の `createDefaultSaveStrategyRegistry()` に登録します（設定画面の「エディタ → プロジェクトの保存方式」から切替可能）。
 
 ### ビジュアライザー演出を追加する（`VisualizerRenderer`）
 1. `src/visualizers/` に `VisualizerRenderer`（`id`, `name`, `render(ctx, frame, preset)`）を実装します。

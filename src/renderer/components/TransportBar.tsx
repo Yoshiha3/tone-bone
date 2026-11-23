@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { GRID_DIVISIONS, MAX_BARS, type GridDivision } from '@core/types'
 import {
   exportCurrentProjectWav,
   requestNewProject,
+  requestOpenExternalProject,
+  requestReturnToHome,
   stopPlayback,
   togglePlayPause
 } from '../actions'
@@ -18,7 +20,9 @@ export function TransportBar() {
   const gridDivision = useProjectStore((s) => s.gridDivision)
   const isPlaying = useProjectStore((s) => s.isPlaying)
   const isDirty = useProjectStore((s) => s.isDirty)
-  const setTitle = useProjectStore((s) => s.setTitle)
+  const isAutoSaving = useProjectStore((s) => s.isAutoSaving)
+  const saveMode = useProjectStore((s) => s.settings.saveMode)
+  const currentFilePath = useProjectStore((s) => s.currentFilePath)
   const setBpm = useProjectStore((s) => s.setBpm)
   const setBars = useProjectStore((s) => s.setBars)
   const toggleLoop = useProjectStore((s) => s.toggleLoop)
@@ -27,24 +31,8 @@ export function TransportBar() {
   const setSettingsOpen = useProjectStore((s) => s.setSettingsOpen)
   const saveProject = useProjectStore((s) => s.saveProject)
   const saveProjectAs = useProjectStore((s) => s.saveProjectAs)
-  const openProject = useProjectStore((s) => s.openProject)
 
-  const [draftTitle, setDraftTitle] = useState(title)
   const [exporting, setExporting] = useState(false)
-
-  useEffect(() => {
-    setDraftTitle(title)
-  }, [title])
-
-  const commitTitle = (): void => {
-    const trimmed = draftTitle.trim()
-    if (trimmed.length > 0) {
-      setTitle(trimmed)
-      setDraftTitle(trimmed)
-    } else {
-      setDraftTitle(title)
-    }
-  }
 
   const handleExportWav = async (): Promise<void> => {
     if (exporting) return
@@ -56,30 +44,26 @@ export function TransportBar() {
     }
   }
 
+  const saveTooltip =
+    saveMode === 'auto' && currentFilePath
+      ? '自動保存 ON（Cmd/Ctrl+S で今すぐ保存 / Shift+クリックで別名保存）'
+      : '保存 (Cmd/Ctrl+S) / Shift+クリックで別名保存'
+
   return (
     <header className={styles.bar} data-testid="transport-bar">
       <div className={styles.group}>
-        <span className={styles.brand}>Tone Bone</span>
-        <input
-          type="text"
-          className={styles.titleInput}
-          value={draftTitle}
-          onChange={(e) => setDraftTitle(e.target.value)}
-          onBlur={commitTitle}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              commitTitle()
-              e.currentTarget.blur()
-            } else if (e.key === 'Escape') {
-              e.stopPropagation()
-              setDraftTitle(title)
-              e.currentTarget.blur()
-            }
-          }}
-          aria-label="曲名"
-          title="曲名を変更"
-          data-testid="project-title-input"
-        />
+        <button
+          type="button"
+          className={styles.homeBtn}
+          onClick={() => void requestReturnToHome()}
+          title="ホーム画面へ戻る"
+          data-testid="home-btn"
+        >
+          ← ホーム
+        </button>
+        <span className={styles.projectTitle} title={title} data-testid="project-title">
+          {title}
+        </span>
         <div className={styles.divider} />
         <button
           type="button"
@@ -158,7 +142,7 @@ export function TransportBar() {
         <div className={styles.divider} />
         <button
           type="button"
-          onClick={requestNewProject}
+          onClick={() => void requestNewProject()}
           title="新規作成 (Cmd/Ctrl+N)"
           data-testid="new-project-btn"
         >
@@ -168,13 +152,19 @@ export function TransportBar() {
           type="button"
           className={styles.saveBtn}
           onClick={(e) => void (e.shiftKey ? saveProjectAs() : saveProject())}
-          title="保存 (Cmd/Ctrl+S) / Shift+クリックで別名保存"
+          title={saveTooltip}
           data-testid="save-btn"
         >
-          <span>保存</span>
-          {isDirty && <span className={styles.dirtyDot} aria-label="未保存の変更あり" />}
+          <span>{isAutoSaving ? '保存中...' : '保存'}</span>
+          {isDirty && !isAutoSaving && (
+            <span className={styles.dirtyDot} aria-label="未保存の変更あり" />
+          )}
         </button>
-        <button type="button" onClick={() => void openProject()} data-testid="open-btn">
+        <button
+          type="button"
+          onClick={() => void requestOpenExternalProject()}
+          data-testid="open-btn"
+        >
           開く
         </button>
         <button
