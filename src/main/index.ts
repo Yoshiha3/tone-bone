@@ -1,12 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
-import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
-import type {
-  ExportFileOptions,
-  OpenProjectFileOptions,
-  SaveProjectFileOptions
-} from '@platform/types'
+import { registerTypedIpcHandler } from '@platform/ipcContract'
 import { loadAllSoundPacks, loadAllThemePacks } from './packRepository'
 import {
   createUniqueProjectFile,
@@ -56,15 +51,11 @@ function createWindow(): void {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle('settings:load', () => {
-    return settingsRepo.load()
-  })
+  registerTypedIpcHandler(ipcMain, 'loadSettings', () => settingsRepo.load())
 
-  ipcMain.handle('settings:save', (_event, next: AppSettings) => {
-    return settingsRepo.save(next)
-  })
+  registerTypedIpcHandler(ipcMain, 'saveSettings', (next) => settingsRepo.save(next))
 
-  ipcMain.handle('workspace:choose', async () => {
+  registerTypedIpcHandler(ipcMain, 'chooseWorkspaceDir', async () => {
     const current = settingsRepo.load()
     const result = await dialog.showOpenDialog({
       title: 'ワークスペースフォルダを選択',
@@ -77,7 +68,7 @@ function registerIpcHandlers(): void {
     return result.filePaths[0]
   })
 
-  ipcMain.handle('workspace:openFolder', async (_event, target: WorkspaceFolderTarget) => {
+  registerTypedIpcHandler(ipcMain, 'openFolder', async (target) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     const dir =
@@ -93,19 +84,19 @@ function registerIpcHandlers(): void {
     await shell.openPath(dir)
   })
 
-  ipcMain.handle('packs:listThemes', () => {
+  registerTypedIpcHandler(ipcMain, 'listThemePacks', () => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     return loadAllThemePacks(getBuiltinResourcesSubdir('themes'), paths.themes)
   })
 
-  ipcMain.handle('packs:listSounds', () => {
+  registerTypedIpcHandler(ipcMain, 'listSoundPacks', () => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     return loadAllSoundPacks(getBuiltinResourcesSubdir('sounds'), paths.sounds)
   })
 
-  ipcMain.handle('project:save', async (_event, options: SaveProjectFileOptions) => {
+  registerTypedIpcHandler(ipcMain, 'saveProjectFile', async (options) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     const result = await dialog.showSaveDialog({
@@ -120,13 +111,13 @@ function registerIpcHandlers(): void {
     return { canceled: false, filePath: result.filePath }
   })
 
-  ipcMain.handle('project:write', (_event, filePath: string, content: string) => {
+  registerTypedIpcHandler(ipcMain, 'writeProjectFile', (filePath, content) => {
     mkdirSync(dirname(filePath), { recursive: true })
     writeFileSync(filePath, content, 'utf-8')
     return { canceled: false, filePath }
   })
 
-  ipcMain.handle('project:open', async (_event, options: OpenProjectFileOptions) => {
+  registerTypedIpcHandler(ipcMain, 'openProjectFile', async (options) => {
     const current = settingsRepo.load()
     const paths = getWorkspacePaths(current.workspaceDir)
     const result = await dialog.showOpenDialog({
@@ -143,36 +134,36 @@ function registerIpcHandlers(): void {
     return { canceled: false, filePath, content }
   })
 
-  ipcMain.handle('projects:list', () => {
+  registerTypedIpcHandler(ipcMain, 'listWorkspaceProjects', () => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     return listWorkspaceProjects(paths.projects)
   })
 
-  ipcMain.handle('projects:read', (_event, filePath: string) => {
+  registerTypedIpcHandler(ipcMain, 'readWorkspaceProject', (filePath) => {
     const { content } = readWorkspaceProjectFile(filePath)
     return { canceled: false, filePath, content }
   })
 
-  ipcMain.handle('projects:create', (_event, baseTitle: string, content: string) => {
+  registerTypedIpcHandler(ipcMain, 'createWorkspaceProject', (baseTitle, content) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     return createUniqueProjectFile(paths.projects, baseTitle, content)
   })
 
-  ipcMain.handle('projects:rename', (_event, filePath: string, newTitle: string) => {
+  registerTypedIpcHandler(ipcMain, 'renameWorkspaceProject', (filePath, newTitle) => {
     return renameWorkspaceProjectFile(filePath, newTitle)
   })
 
-  ipcMain.handle('projects:duplicate', (_event, filePath: string) => {
+  registerTypedIpcHandler(ipcMain, 'duplicateWorkspaceProject', (filePath) => {
     return duplicateWorkspaceProjectFile(filePath)
   })
 
-  ipcMain.handle('projects:delete', async (_event, filePath: string) => {
+  registerTypedIpcHandler(ipcMain, 'deleteWorkspaceProject', async (filePath) => {
     await deleteWorkspaceProjectFile(filePath, (p) => shell.trashItem(p))
   })
 
-  ipcMain.handle('audio:saveExport', async (_event, options: ExportFileOptions) => {
+  registerTypedIpcHandler(ipcMain, 'saveExportFile', async (options) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     const ext = options.extension.replace(/^\./, '')
