@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
+import type { ExportFileOptions } from '@platform/types'
 import { loadAllSoundPacks, loadAllThemePacks } from './packRepository'
 import {
   createUniqueProjectFile,
@@ -167,18 +168,19 @@ function registerIpcHandlers(): void {
     await deleteWorkspaceProjectFile(filePath, (p) => shell.trashItem(p))
   })
 
-  ipcMain.handle('audio:saveWav', async (_event, suggestedName: string, bytes: Uint8Array) => {
+  ipcMain.handle('audio:saveExport', async (_event, options: ExportFileOptions) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
+    const ext = options.extension.replace(/^\./, '')
     const result = await dialog.showSaveDialog({
-      title: 'WAVファイルを書き出し',
-      defaultPath: join(paths.exports, suggestedName),
-      filters: [{ name: 'WAV Audio', extensions: ['wav'] }]
+      title: `${ext.toUpperCase()}ファイルを書き出し`,
+      defaultPath: join(paths.exports, options.suggestedName),
+      filters: [{ name: options.filterName, extensions: [ext] }]
     })
     if (result.canceled || !result.filePath) {
       return { canceled: true }
     }
-    writeFileSync(result.filePath, Buffer.from(bytes))
+    writeFileSync(result.filePath, Buffer.from(options.data))
     return { canceled: false, filePath: result.filePath }
   })
 }

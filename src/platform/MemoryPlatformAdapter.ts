@@ -6,7 +6,7 @@ import {
   type SoundPack,
   type ThemePack
 } from '@core/types'
-import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
+import type { ExportFileOptions, OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
 
 interface StoredMemoryProject {
   content: string
@@ -48,7 +48,9 @@ function summarizeMemoryProject(filePath: string, entry: StoredMemoryProject): P
 export class MemoryPlatformAdapter implements PlatformAdapter {
   lastSavedProjectContent: string | null = null
   lastSavedProjectPath: string | null = null
-  lastSavedWavBytes: Uint8Array | null = null
+  lastSavedExportBytes: Uint8Array | null = null
+  lastSavedExportPath: string | null = null
+  lastSavedExportExtension: string | null = null
   saveDialogCount = 0
   directWriteCount = 0
   settings: AppSettings
@@ -106,9 +108,12 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     }
   }
 
-  async saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult> {
-    this.lastSavedWavBytes = data
-    return { canceled: false, filePath: `${this.settings.workspaceDir}/exports/${suggestedName}` }
+  async saveExportFile(options: ExportFileOptions): Promise<SaveFileResult> {
+    const filePath = `${this.settings.workspaceDir}/exports/${options.suggestedName}`
+    this.lastSavedExportBytes = options.data
+    this.lastSavedExportPath = filePath
+    this.lastSavedExportExtension = options.extension
+    return { canceled: false, filePath }
   }
 
   async loadSettings(): Promise<AppSettings> {

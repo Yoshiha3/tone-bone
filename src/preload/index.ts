@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
+import type { ExportFileOptions } from '@platform/types'
 
 contextBridge.exposeInMainWorld('tonebone', {
   saveProjectFile: (suggestedName: string, content: string) =>
@@ -7,8 +8,7 @@ contextBridge.exposeInMainWorld('tonebone', {
   writeProjectFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('project:write', filePath, content),
   openProjectFile: () => ipcRenderer.invoke('project:open'),
-  saveWavFile: (suggestedName: string, data: Uint8Array) =>
-    ipcRenderer.invoke('audio:saveWav', suggestedName, data),
+  saveExportFile: (options: ExportFileOptions) => ipcRenderer.invoke('audio:saveExport', options),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),
   chooseWorkspaceDir: () => ipcRenderer.invoke('workspace:choose'),

@@ -1,4 +1,4 @@
-import { audioEngine, wavExporter } from './audioContext'
+import { audioEngine, audioExporterRegistry } from './audioContext'
 import { defaultPlatform, projectStore } from './store/useProjectStore'
 
 export function sanitizeFileName(rawTitle: string): string {
@@ -66,10 +66,22 @@ export async function requestOpenExternalProject(): Promise<boolean> {
   return state.openProject()
 }
 
-export async function exportCurrentProjectWav(): Promise<boolean> {
+export async function exportCurrentProject(exporterId?: string): Promise<boolean> {
   const { project, mergedSounds } = projectStore.getState()
-  const wavBytes = await wavExporter.export(project, mergedSounds.instruments)
-  const fileName = `${sanitizeFileName(project.title)}.wav`
-  const result = await defaultPlatform.saveWavFile(fileName, wavBytes)
+  const exporter = exporterId
+    ? audioExporterRegistry.get(exporterId)
+    : audioExporterRegistry.getDefault()
+  const bytes = await exporter.export(project, mergedSounds.instruments)
+  const fileName = `${sanitizeFileName(project.title)}.${exporter.extension}`
+  const result = await defaultPlatform.saveExportFile({
+    suggestedName: fileName,
+    filterName: exporter.label,
+    extension: exporter.extension,
+    data: bytes
+  })
   return !result.canceled
+}
+
+export async function exportCurrentProjectWav(): Promise<boolean> {
+  return exportCurrentProject('wav-pcm16')
 }

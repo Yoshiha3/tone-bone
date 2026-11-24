@@ -18,7 +18,7 @@ describe('ElectronPlatformAdapter', () => {
       saveProjectFile: vi.fn(async () => ({ canceled: false, filePath: '/p.json' })),
       writeProjectFile: vi.fn(async () => ({ canceled: false, filePath: '/p.json' })),
       openProjectFile: vi.fn(async () => ({ canceled: false, filePath: '/p.json', content: '{}' })),
-      saveWavFile: vi.fn(async () => ({ canceled: false, filePath: '/a.wav' })),
+      saveExportFile: vi.fn(async () => ({ canceled: false, filePath: '/a.wav' })),
       loadSettings: vi.fn(async () => ({
         workspaceDir: '/ws',
         activeThemePackIds: ['minimal-light'],
@@ -69,7 +69,12 @@ describe('ElectronPlatformAdapter', () => {
     await adapter.saveProjectFile('a.json', '{}')
     await adapter.writeProjectFile('/a.json', '{}')
     await adapter.openProjectFile()
-    await adapter.saveWavFile('a.wav', new Uint8Array([1]))
+    await adapter.saveExportFile({
+      suggestedName: 'a.wav',
+      filterName: 'WAV Audio',
+      extension: 'wav',
+      data: new Uint8Array([1])
+    })
     const loaded = await adapter.loadSettings()
     await adapter.saveSettings(loaded)
     await adapter.chooseWorkspaceDir()

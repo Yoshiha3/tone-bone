@@ -5,7 +5,7 @@ import type {
   ThemePack,
   WorkspaceFolderTarget
 } from '@core/types'
-import type { OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
+import type { ExportFileOptions, OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
 
 declare global {
   interface Window {
@@ -33,8 +33,8 @@ export class ElectronPlatformAdapter implements PlatformAdapter {
     return this.bridge.openProjectFile()
   }
 
-  saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult> {
-    return this.bridge.saveWavFile(suggestedName, data)
+  saveExportFile(options: ExportFileOptions): Promise<SaveFileResult> {
+    return this.bridge.saveExportFile(options)
   }
 
   loadSettings(): Promise<AppSettings> {

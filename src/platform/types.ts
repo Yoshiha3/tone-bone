@@ -17,11 +17,18 @@ export interface OpenFileResult {
   content?: string
 }
 
+export interface ExportFileOptions {
+  suggestedName: string
+  filterName: string
+  extension: string
+  data: Uint8Array
+}
+
 export interface PlatformAdapter {
   saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult>
   writeProjectFile(filePath: string, content: string): Promise<SaveFileResult>
   openProjectFile(): Promise<OpenFileResult>
-  saveWavFile(suggestedName: string, data: Uint8Array): Promise<SaveFileResult>
+  saveExportFile(options: ExportFileOptions): Promise<SaveFileResult>
   loadSettings(): Promise<AppSettings>
   saveSettings(settings: AppSettings): Promise<AppSettings>
   chooseWorkspaceDir(): Promise<string | null>

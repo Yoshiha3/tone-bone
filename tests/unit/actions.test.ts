@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  exportCurrentProject,
   exportCurrentProjectWav,
   requestNewProject,
   requestOpenExternalProject,
@@ -8,7 +9,7 @@ import {
   stopPlayback,
   togglePlayPause
 } from '@renderer/actions'
-import { audioEngine, wavExporter } from '@renderer/audioContext'
+import { audioEngine, audioExporterRegistry } from '@renderer/audioContext'
 import { defaultPlatform, projectStore } from '@renderer/store/useProjectStore'
 
 describe('actions', () => {
@@ -103,11 +104,12 @@ describe('actions', () => {
     expect(stopSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('exports WAV bytes and saves with sanitized filename via defaultPlatform', async () => {
+  it('exports audio bytes via AudioExporterRegistry and saves with sanitized filename', async () => {
     const fakeBytes = new Uint8Array([82, 73, 70, 70])
-    const exportSpy = vi.spyOn(wavExporter, 'export').mockResolvedValue(fakeBytes)
-    const saveWavSpy = vi
-      .spyOn(defaultPlatform, 'saveWavFile')
+    const defaultExporter = audioExporterRegistry.getDefault()
+    const exportSpy = vi.spyOn(defaultExporter, 'export').mockResolvedValue(fakeBytes)
+    const saveExportSpy = vi
+      .spyOn(defaultPlatform, 'saveExportFile')
       .mockResolvedValue({ canceled: false, filePath: '/exports/Demo_Mix.wav' })
 
     projectStore.setState((s) => ({
@@ -116,9 +118,14 @@ describe('actions', () => {
 
     expect(await exportCurrentProjectWav()).toBe(true)
     expect(exportSpy).toHaveBeenCalledTimes(1)
-    expect(saveWavSpy).toHaveBeenCalledWith('Demo_Mix.wav', fakeBytes)
+    expect(saveExportSpy).toHaveBeenCalledWith({
+      suggestedName: 'Demo_Mix.wav',
+      filterName: 'WAV Audio',
+      extension: 'wav',
+      data: fakeBytes
+    })
 
-    saveWavSpy.mockResolvedValueOnce({ canceled: true })
-    expect(await exportCurrentProjectWav()).toBe(false)
+    saveExportSpy.mockResolvedValueOnce({ canceled: true })
+    expect(await exportCurrentProject()).toBe(false)
   })
 })
