@@ -1,8 +1,7 @@
 import { getAudibleTrackIds, ticksToSeconds } from '@core/musicMath'
 import { TICKS_PER_BAR, type InstrumentDef, type Project } from '@core/types'
 import type { AudioExporter } from '../types'
-import { DrumVoice } from '../voices/DrumVoice'
-import { SynthVoice } from '../voices/SynthVoice'
+import { createDefaultVoiceRegistry, type VoiceRegistry } from '../VoiceRegistry'
 
 function writeString(view: DataView, offset: number, str: string): void {
   for (let i = 0; i < str.length; i++) {
@@ -75,8 +74,11 @@ export class WavExporter implements AudioExporter {
   readonly id = 'wav-pcm16'
   readonly extension = 'wav'
 
-  private readonly synthVoice = new SynthVoice()
-  private readonly drumVoice = new DrumVoice()
+  private readonly voiceRegistry: VoiceRegistry
+
+  constructor(voiceRegistry: VoiceRegistry = createDefaultVoiceRegistry()) {
+    this.voiceRegistry = voiceRegistry
+  }
 
   async export(project: Project, instruments: readonly InstrumentDef[]): Promise<Uint8Array> {
     const sampleRate = 44100
@@ -99,7 +101,7 @@ export class WavExporter implements AudioExporter {
       trackGain.connect(masterGain)
 
       const instrument = instruments.find((i) => i.id === track.instrumentId)
-      const voice = track.type === 'drum' ? this.drumVoice : this.synthVoice
+      const voice = this.voiceRegistry.get(track.type)
 
       for (const note of track.notes) {
         if (note.startTick >= totalTicks) continue

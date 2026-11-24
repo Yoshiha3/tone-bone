@@ -2,8 +2,7 @@ import { secondsToTicks, ticksToSeconds } from '@core/musicMath'
 import { TICKS_PER_BAR, type InstrumentDef, type Project, type Track } from '@core/types'
 import { collectScheduledNotes } from './scheduler'
 import type { NoteTriggerEvent } from './types'
-import { DrumVoice } from './voices/DrumVoice'
-import { SynthVoice } from './voices/SynthVoice'
+import { createDefaultVoiceRegistry, type VoiceRegistry } from './VoiceRegistry'
 
 const LOOKAHEAD_MS = 25
 const SCHEDULE_AHEAD_SEC = 0.12
@@ -12,8 +11,7 @@ export class AudioEngine {
   private context: AudioContext | null = null
   private masterGain: GainNode | null = null
   private analyser: AnalyserNode | null = null
-  private readonly synthVoice = new SynthVoice()
-  private readonly drumVoice = new DrumVoice()
+  private readonly voiceRegistry: VoiceRegistry
 
   private isPlaying = false
   private timerId: ReturnType<typeof setInterval> | null = null
@@ -29,10 +27,12 @@ export class AudioEngine {
 
   constructor(
     getProject: () => Project,
-    getInstruments: () => readonly InstrumentDef[]
+    getInstruments: () => readonly InstrumentDef[],
+    voiceRegistry: VoiceRegistry = createDefaultVoiceRegistry()
   ) {
     this.getProject = getProject
     this.getInstruments = getInstruments
+    this.voiceRegistry = voiceRegistry
   }
 
   private ensureContext(): AudioContext {
@@ -151,27 +151,16 @@ export class AudioEngine {
 
     const instrument = this.getInstruments().find((i) => i.id === track.instrumentId)
     const now = ctx.currentTime + 0.005
-    if (track.type === 'drum') {
-      this.drumVoice.trigger({
-        context: ctx,
-        destination: trackGain,
-        pitch,
-        startTime: now,
-        durationSeconds,
-        velocity: 0.85,
-        instrument
-      })
-    } else {
-      this.synthVoice.trigger({
-        context: ctx,
-        destination: trackGain,
-        pitch,
-        startTime: now,
-        durationSeconds,
-        velocity: 0.8,
-        instrument
-      })
-    }
+    const voice = this.voiceRegistry.get(track.type)
+    voice.trigger({
+      context: ctx,
+      destination: trackGain,
+      pitch,
+      startTime: now,
+      durationSeconds,
+      velocity: track.type === 'drum' ? 0.85 : 0.8,
+      instrument
+    })
   }
 
   private scheduleLoop(): void {
@@ -212,7 +201,7 @@ export class AudioEngine {
       trackGain.connect(this.masterGain)
 
       const instrument = instruments.find((i) => i.id === item.track.instrumentId)
-      const voice = item.track.type === 'drum' ? this.drumVoice : this.synthVoice
+      const voice = this.voiceRegistry.get(item.track.type)
       voice.trigger({
         context: ctx,
         destination: trackGain,

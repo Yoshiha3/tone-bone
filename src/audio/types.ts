@@ -1,4 +1,4 @@
-import type { InstrumentDef, Note, Project } from '@core/types'
+import type { InstrumentDef, Note, Project, TrackType } from '@core/types'
 
 export interface VoiceTriggerParams {
   context: BaseAudioContext
@@ -11,7 +11,7 @@ export interface VoiceTriggerParams {
 }
 
 export interface AudioVoice {
-  readonly type: 'synth' | 'drum'
+  readonly type: TrackType
   trigger(params: VoiceTriggerParams): void
 }
 
