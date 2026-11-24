@@ -72,6 +72,7 @@ export function encodeAudioBufferToWav(audioBuffer: AudioBuffer): Uint8Array {
 
 export class WavExporter implements AudioExporter {
   readonly id = 'wav-pcm16'
+  readonly label = 'WAV Audio'
   readonly extension = 'wav'
 
   private readonly voiceRegistry: VoiceRegistry

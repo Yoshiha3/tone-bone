@@ -24,6 +24,7 @@ export interface NoteTriggerEvent {
 
 export interface AudioExporter {
   readonly id: string
+  readonly label: string
   readonly extension: string
   export(project: Project, instruments: readonly InstrumentDef[]): Promise<Uint8Array>
 }
