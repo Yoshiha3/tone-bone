@@ -50,10 +50,11 @@ flowchart TD
 - `src/audio/scheduler.ts` の `collectScheduledNotes()` と `AudioEngine` は、再生中の内部時間を折り返さず単調増加させます。
 - UI 表示用の再生ヘッド位置（`getCurrentTick()`）のみ `% totalTicks` で折り返すことで、ループ境界を跨ぐ先読み窓での重複発音や欠落を構造的に防いでいます。
 
-### 3. ピアノロールの3層分離とビューポート仮想化
+### 3. ピアノロールの4層分離とビューポート仮想化
 - `pianoRollGeometry.ts`：座標変換・可視範囲カリング・ノーツ当たり判定（純粋 TS・単体テスト対象）
+- `pianoRollInteraction.ts` / `usePianoRollInteraction.ts`：ポインタ状態機械（作成・伸縮・移動・範囲選択）とツール定義（純粋 TS・単体テスト対象）
 - `pianoRollRenderer.ts`：画面内に見えている範囲のみを描画する仮想化 Canvas レンダラー
-- `PianoRoll.tsx`：スクロールスペーサー＋画面サイズ固定の Sticky Canvas と React ポインタイベント配線
+- `PianoRoll.tsx`：スクロールスペーサー＋画面サイズ固定の Sticky Canvas とフッター UI
 - この構成により、4小節でも 999小節でも Canvas のピクセル数と描画コストは一定です。
 
 ---
@@ -84,4 +85,7 @@ flowchart TD
 
 ### 設定タブを追加する
 1. `src/renderer/components/settings/` に新しいタブコンポーネントを作成します。
-2. `src/renderer/components/SettingsModal.tsx` の `SettingsTabId` 型、`TABS` 配列、およびレンダリング分岐に新しいタブを追加します。
+2. `src/renderer/components/SettingsModal.tsx` の `SETTINGS_TABS` 配列に 1 エントリ追加するだけでタブ切替と描画が自動で反映されます。
+
+### キーボードショートカットを追加・変更する
+- `src/renderer/shortcuts.ts` の `SHORTCUT_BINDINGS` 宣言テーブルにエントリを追加・変更します（`App.tsx` のイベントリスナ変更は不要）。
