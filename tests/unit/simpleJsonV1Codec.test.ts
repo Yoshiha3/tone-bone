@@ -47,4 +47,31 @@ describe('SimpleJsonV1Codec & CodecRegistry', () => {
     expect(decodedV2.codecId).toBe('custom-v2')
     expect(decodedV2.project).toEqual(demo)
   })
+
+  it('derives default extension, all extensions, and dialog file filters dynamically', () => {
+    const registry = createDefaultCodecRegistry()
+    expect(registry.getDefaultExtension()).toBe('json')
+    expect(registry.getAllExtensions()).toEqual(['json'])
+    expect(registry.getFileFilters()).toEqual([
+      { name: 'Tone Bone Project (.json)', extensions: ['json'] }
+    ])
+
+    const v2: ProjectCodec = {
+      id: 'v2',
+      label: 'Tone Bone v2 (.tb2)',
+      extensions: ['.TB2', 'json'],
+      canDecode: () => false,
+      encode: () => '',
+      decode: () => createDemoProject()
+    }
+    registry.register(v2, true)
+
+    expect(registry.getDefaultExtension()).toBe('tb2')
+    expect(registry.getAllExtensions()).toEqual(['json', 'tb2'])
+    expect(registry.getFileFilters()).toEqual([
+      { name: 'All Supported Projects', extensions: ['json', 'tb2'] },
+      { name: 'Tone Bone Project (.json)', extensions: ['json'] },
+      { name: 'Tone Bone v2 (.tb2)', extensions: ['tb2', 'json'] }
+    ])
+  })
 })

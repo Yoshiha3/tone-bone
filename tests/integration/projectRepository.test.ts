@@ -2,8 +2,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSyn
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { SimpleJsonV1Codec } from '@codecs/SimpleJsonV1Codec'
+import type { ProjectCodec } from '@codecs/types'
 import { createDemoProject, createEmptyProject } from '@core/demoProject'
+import type { Project } from '@core/types'
 import {
   createUniqueProjectFile,
   deleteWorkspaceProjectFile,
@@ -95,5 +98,36 @@ describe('Workspace Project Repository (Integration)', () => {
     // Fallback unlink when no trashItem function is passed
     await deleteWorkspaceProjectFile(copy2.filePath)
     expect(existsSync(copy2.filePath)).toBe(false)
+  })
+
+  it('supports custom codec extensions for create, list, and rename via CodecRegistry', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tonebone-proj-custom-ext-'))
+    tempDirs.push(dir)
+
+    const codecs = createDefaultCodecRegistry()
+    const tb2Codec: ProjectCodec = {
+      id: 'tb2',
+      label: 'Tone Bone v2 (.tb2)',
+      extensions: ['tb2'],
+      canDecode: (raw) => raw.startsWith('TB2:'),
+      encode: (p) => `TB2:${JSON.stringify(p)}`,
+      decode: (raw) => JSON.parse(raw.slice(4)) as Project
+    }
+    codecs.register(tb2Codec, true)
+
+    const created = createUniqueProjectFile(
+      dir,
+      'Custom Track',
+      tb2Codec.encode(createDemoProject()),
+      codecs
+    )
+    expect(created.fileName).toBe('Custom Track.tb2')
+
+    const listed = listWorkspaceProjects(dir, codecs)
+    expect(listed.map((p) => p.fileName)).toEqual(['Custom Track.tb2'])
+
+    const renamed = renameWorkspaceProjectFile(created.filePath, 'Custom Renamed', codecs)
+    expect(renamed.fileName).toBe('Custom Renamed.tb2')
+    expect(readFileSync(renamed.filePath, 'utf-8')).toContain('"title":"Custom Renamed"')
   })
 })

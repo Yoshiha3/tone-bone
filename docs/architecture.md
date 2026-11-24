@@ -34,8 +34,8 @@ flowchart TD
 | `src/packs/` | テーマパック／音源パックの独立優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
 | `src/audio/` | `BaseAudioContext` 共通設計の音源・レジストリ・単調増加スケジューラ・音声書き出し | `scheduler.ts`, `AudioEngine.ts`, `VoiceRegistry.ts`, `AudioExporterRegistry.ts`, `voices/`, `exporters/` |
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
-| `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
-| `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・プロジェクト/設定/パック永続化 | `main/index.ts`, `projectRepository.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
+| `src/platform/` | OS/ファイルI/O 抽象インターフェース・共有型安全 IPC 契約（Electron / インメモリ実装） | `types.ts`, `ipcContract.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
+| `src/main/` & `src/preload/` | Electron Main プロセス・自動生成 IPC ブリッジ・機能別 IPC ハンドラ・永続化リポジトリ | `main/index.ts`, `main/ipc/`, `projectRepository.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
 | `src/renderer/` | 薄い React UI・アプリ操作窓口・スライス分割された状態ストア | `actions.ts`, `audioContext.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `store/slices/`, `components/` |
 
 ---
@@ -63,7 +63,7 @@ flowchart TD
 ### 保存形式を追加・差し替える（`ProjectCodec`）
 1. `src/codecs/` に `ProjectCodec`（`id`, `label`, `extensions`, `canDecode`, `encode`, `decode`）を実装したクラスを追加します。
 2. `src/codecs/CodecRegistry.ts` の `createDefaultCodecRegistry()` で `registry.register(new MyCodec(), true)` のように登録します（第2引数 `true` でデフォルト保存形式を差し替え可能。旧形式も登録したままなら `decodeAuto()` で自動判別して開けます）。
-   > **現在の制約**：保存時の初期拡張子（`src/renderer/store/useProjectStore.ts`）と Electron のファイル選択ダイアログのフィルタ（`src/main/index.ts`）は現在 `.json` 固定となっています。`.json` 以外の拡張子を使うコーデックを追加する場合は、これらの箇所も併せて更新する必要があります。
+3. 保存時の初期拡張子・ファイル選択ダイアログのフィルタ・ワークスペース一覧／作成／リネームはすべて `CodecRegistry`（`getDefaultExtension` / `getAllExtensions` / `getFileFilters`）から自動導出されるため、UI・ストア・Main の変更は不要です。
 
 ### 保存方式を追加・差し替える（`SaveStrategy`）
 1. `src/persistence/` に `SaveStrategy`（`id`, `label`, `onProjectChanged`, `prepareLeave`, `dispose`）を実装したクラスを追加します（例：世代バックアップ付き保存やクラウド同期など）。
