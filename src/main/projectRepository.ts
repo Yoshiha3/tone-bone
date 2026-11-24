@@ -8,66 +8,50 @@ import {
   unlinkSync,
   writeFileSync
 } from 'fs'
-import { basename, dirname, join } from 'path'
-import type { ProjectSummary } from '@core/types'
+import { basename, dirname, extname, join } from 'path'
+import { createDefaultCodecRegistry, type CodecRegistry } from '@codecs/CodecRegistry'
+import type { Project, ProjectSummary } from '@core/types'
 
-const SUPPORTED_FORMAT = 'tone-bone/v1'
-
-interface RawProjectJson {
-  format?: unknown
-  title?: unknown
-  bpm?: unknown
-  bars?: unknown
-  tracks?: unknown
-  [key: string]: unknown
-}
+const defaultCodecRegistry = createDefaultCodecRegistry()
 
 export function sanitizeProjectFileName(rawTitle: string): string {
   const cleaned = rawTitle.trim().replace(/[\\/:*?"<>|]/g, '_')
   return cleaned.length > 0 ? cleaned : 'Untitled'
 }
 
-function parseProjectJson(raw: string): RawProjectJson | null {
+function tryDecodeProject(
+  raw: string,
+  codecs: CodecRegistry
+): { project: Project; codecId: string } | null {
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null) return null
-    const obj = parsed as RawProjectJson
-    if (
-      obj.format !== SUPPORTED_FORMAT ||
-      typeof obj.title !== 'string' ||
-      typeof obj.bpm !== 'number' ||
-      typeof obj.bars !== 'number' ||
-      !Array.isArray(obj.tracks)
-    ) {
-      return null
-    }
-    return obj
+    return codecs.decodeAuto(raw)
   } catch {
     return null
   }
 }
 
-function buildSummary(filePath: string, parsed: RawProjectJson): ProjectSummary {
+function buildSummary(filePath: string, project: Project): ProjectSummary {
   const stat = statSync(filePath)
   return {
     filePath,
     fileName: basename(filePath),
-    title: String(parsed.title),
-    bpm: Number(parsed.bpm),
-    bars: Number(parsed.bars),
-    trackCount: Array.isArray(parsed.tracks) ? parsed.tracks.length : 0,
+    title: project.title,
+    bpm: project.bpm,
+    bars: project.bars,
+    trackCount: project.tracks.length,
     updatedAtMs: stat.mtimeMs
   }
 }
 
 function findAvailableTitleAndPath(
   projectsDir: string,
-  baseTitle: string
+  baseTitle: string,
+  extension: string
 ): { title: string; filePath: string } {
   const trimmedBase = baseTitle.trim() || 'Untitled'
   for (let suffix = 1; suffix < 10000; suffix++) {
     const candidateTitle = suffix === 1 ? trimmedBase : `${trimmedBase} ${suffix}`
-    const fileName = `${sanitizeProjectFileName(candidateTitle)}.json`
+    const fileName = `${sanitizeProjectFileName(candidateTitle)}.${extension}`
     const candidatePath = join(projectsDir, fileName)
     if (!existsSync(candidatePath)) {
       return { title: candidateTitle, filePath: candidatePath }
@@ -76,24 +60,30 @@ function findAvailableTitleAndPath(
   const fallback = `${trimmedBase} ${Date.now()}`
   return {
     title: fallback,
-    filePath: join(projectsDir, `${sanitizeProjectFileName(fallback)}.json`)
+    filePath: join(projectsDir, `${sanitizeProjectFileName(fallback)}.${extension}`)
   }
 }
 
-export function listWorkspaceProjects(projectsDir: string): ProjectSummary[] {
+export function listWorkspaceProjects(
+  projectsDir: string,
+  codecs: CodecRegistry = defaultCodecRegistry
+): ProjectSummary[] {
   if (!existsSync(projectsDir)) return []
 
+  const allowedExts = new Set(codecs.getAllExtensions())
   const entries = readdirSync(projectsDir, { withFileTypes: true })
   const summaries: ProjectSummary[] = []
 
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.json')) continue
+    if (!entry.isFile()) continue
+    const ext = extname(entry.name).replace(/^\./, '').toLowerCase()
+    if (!allowedExts.has(ext)) continue
     const filePath = join(projectsDir, entry.name)
     try {
       const raw = readFileSync(filePath, 'utf-8')
-      const parsed = parseProjectJson(raw)
-      if (!parsed) continue
-      summaries.push(buildSummary(filePath, parsed))
+      const decoded = tryDecodeProject(raw, codecs)
+      if (!decoded) continue
+      summaries.push(buildSummary(filePath, decoded.project))
     } catch {
       // Skip unreadable files
     }
@@ -113,21 +103,29 @@ export function readWorkspaceProjectFile(filePath: string): { filePath: string; 
 export function createUniqueProjectFile(
   projectsDir: string,
   baseTitle: string,
-  rawContent: string
+  rawContent: string,
+  codecs: CodecRegistry = defaultCodecRegistry
 ): ProjectSummary {
   mkdirSync(projectsDir, { recursive: true })
-  const { title, filePath } = findAvailableTitleAndPath(projectsDir, baseTitle)
-  const parsed = parseProjectJson(rawContent)
-  if (!parsed) {
+  const decoded = tryDecodeProject(rawContent, codecs)
+  if (!decoded) {
     throw new Error('Invalid project content')
   }
 
-  const finalObj: RawProjectJson = { ...parsed, title }
-  writeFileSync(filePath, JSON.stringify(finalObj, null, 2) + '\n', 'utf-8')
-  return buildSummary(filePath, finalObj)
+  const codec = codecs.getById(decoded.codecId) ?? codecs.getDefault()
+  const ext = codec.extensions[0]?.replace(/^\./, '').toLowerCase() ?? codecs.getDefaultExtension()
+  const { title, filePath } = findAvailableTitleAndPath(projectsDir, baseTitle, ext)
+
+  const updatedProject: Project = { ...decoded.project, title }
+  writeFileSync(filePath, codec.encode(updatedProject), 'utf-8')
+  return buildSummary(filePath, updatedProject)
 }
 
-export function renameWorkspaceProjectFile(filePath: string, newTitle: string): ProjectSummary {
+export function renameWorkspaceProjectFile(
+  filePath: string,
+  newTitle: string,
+  codecs: CodecRegistry = defaultCodecRegistry
+): ProjectSummary {
   const trimmed = newTitle.trim()
   if (!trimmed) {
     throw new Error('曲名を入力してください')
@@ -137,13 +135,15 @@ export function renameWorkspaceProjectFile(filePath: string, newTitle: string): 
   }
 
   const raw = readFileSync(filePath, 'utf-8')
-  const parsed = parseProjectJson(raw)
-  if (!parsed) {
+  const decoded = tryDecodeProject(raw, codecs)
+  if (!decoded) {
     throw new Error('プロジェクトファイルの形式が不正です')
   }
 
+  const codec = codecs.getById(decoded.codecId) ?? codecs.getDefault()
+  const ext = codec.extensions[0]?.replace(/^\./, '').toLowerCase() ?? codecs.getDefaultExtension()
   const dir = dirname(filePath)
-  const targetFileName = `${sanitizeProjectFileName(trimmed)}.json`
+  const targetFileName = `${sanitizeProjectFileName(trimmed)}.${ext}`
   const targetPath = join(dir, targetFileName)
 
   const isSamePath = filePath === targetPath
@@ -153,28 +153,31 @@ export function renameWorkspaceProjectFile(filePath: string, newTitle: string): 
     throw new Error(`同名のプロジェクト「${trimmed}」がすでに存在します`)
   }
 
-  const updatedObj: RawProjectJson = { ...parsed, title: trimmed }
-  const serialized = JSON.stringify(updatedObj, null, 2) + '\n'
+  const updatedProject: Project = { ...decoded.project, title: trimmed }
+  const serialized = codec.encode(updatedProject)
 
   if (!isSamePath) {
     renameSync(filePath, targetPath)
   }
   writeFileSync(targetPath, serialized, 'utf-8')
-  return buildSummary(targetPath, updatedObj)
+  return buildSummary(targetPath, updatedProject)
 }
 
-export function duplicateWorkspaceProjectFile(filePath: string): ProjectSummary {
+export function duplicateWorkspaceProjectFile(
+  filePath: string,
+  codecs: CodecRegistry = defaultCodecRegistry
+): ProjectSummary {
   if (!existsSync(filePath)) {
     throw new Error('対象のプロジェクトファイルが見つかりません')
   }
   const raw = readFileSync(filePath, 'utf-8')
-  const parsed = parseProjectJson(raw)
-  if (!parsed) {
+  const decoded = tryDecodeProject(raw, codecs)
+  if (!decoded) {
     throw new Error('プロジェクトファイルの形式が不正です')
   }
   const dir = dirname(filePath)
-  const baseCopyTitle = `${String(parsed.title).trim() || 'Untitled'} Copy`
-  return createUniqueProjectFile(dir, baseCopyTitle, raw)
+  const baseCopyTitle = `${decoded.project.title.trim() || 'Untitled'} Copy`
+  return createUniqueProjectFile(dir, baseCopyTitle, raw, codecs)
 }
 
 export async function deleteWorkspaceProjectFile(

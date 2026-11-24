@@ -32,6 +32,35 @@ export class CodecRegistry {
     return Array.from(this.codecs.values())
   }
 
+  getDefaultExtension(): string {
+    const ext = this.getDefault().extensions[0]
+    if (!ext) {
+      throw new Error(`Default codec has no extensions: ${this.getDefault().id}`)
+    }
+    return ext.replace(/^\./, '').toLowerCase()
+  }
+
+  getAllExtensions(): string[] {
+    const seen = new Set<string>()
+    for (const codec of this.codecs.values()) {
+      for (const ext of codec.extensions) {
+        const normalized = ext.replace(/^\./, '').toLowerCase()
+        if (normalized) seen.add(normalized)
+      }
+    }
+    return Array.from(seen)
+  }
+
+  getFileFilters(): { name: string; extensions: string[] }[] {
+    const codecs = this.list()
+    const perCodec = codecs.map((codec) => ({
+      name: codec.label,
+      extensions: codec.extensions.map((ext) => ext.replace(/^\./, '').toLowerCase())
+    }))
+    if (perCodec.length <= 1) return perCodec
+    return [{ name: 'All Supported Projects', extensions: this.getAllExtensions() }, ...perCodec]
+  }
+
   encodeDefault(project: Project): string {
     return this.getDefault().encode(project)
   }

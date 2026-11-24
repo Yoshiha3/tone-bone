@@ -66,9 +66,15 @@ describe('ElectronPlatformAdapter', () => {
     vi.stubGlobal('window', { tonebone: bridge })
     const adapter = new ElectronPlatformAdapter()
 
-    await adapter.saveProjectFile('a.json', '{}')
+    await adapter.saveProjectFile({
+      suggestedName: 'a.json',
+      content: '{}',
+      filters: [{ name: 'Tone Bone Project (.json)', extensions: ['json'] }]
+    })
     await adapter.writeProjectFile('/a.json', '{}')
-    await adapter.openProjectFile()
+    await adapter.openProjectFile({
+      filters: [{ name: 'Tone Bone Project (.json)', extensions: ['json'] }]
+    })
     await adapter.saveExportFile({
       suggestedName: 'a.wav',
       filterName: 'WAV Audio',

@@ -236,8 +236,19 @@ export function createWorkspaceSlice(
       saveStrategies.disposeAll()
       const { project } = get()
       const safeName = (project.title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
+      const defaultCodec = deps.codecs.getDefault()
+      const ext = deps.codecs.getDefaultExtension()
       const encoded = deps.codecs.encodeDefault(project)
-      const result = await deps.platform.saveProjectFile(`${safeName}.json`, encoded)
+      const result = await deps.platform.saveProjectFile({
+        suggestedName: `${safeName}.${ext}`,
+        content: encoded,
+        filters: [
+          {
+            name: defaultCodec.label,
+            extensions: defaultCodec.extensions.map((e) => e.replace(/^\./, '').toLowerCase())
+          }
+        ]
+      })
       if (!result.canceled && result.filePath) {
         set({
           currentFilePath: result.filePath,
@@ -251,7 +262,9 @@ export function createWorkspaceSlice(
 
     async openProject() {
       saveStrategies.disposeAll()
-      const result = await deps.platform.openProjectFile()
+      const result = await deps.platform.openProjectFile({
+        filters: deps.codecs.getFileFilters()
+      })
       if (result.canceled || !result.content) return false
       try {
         const { project } = deps.codecs.decodeAuto(result.content)

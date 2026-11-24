@@ -2,7 +2,11 @@ import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
 import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
-import type { ExportFileOptions } from '@platform/types'
+import type {
+  ExportFileOptions,
+  OpenProjectFileOptions,
+  SaveProjectFileOptions
+} from '@platform/types'
 import { loadAllSoundPacks, loadAllThemePacks } from './packRepository'
 import {
   createUniqueProjectFile,
@@ -101,18 +105,18 @@ function registerIpcHandlers(): void {
     return loadAllSoundPacks(getBuiltinResourcesSubdir('sounds'), paths.sounds)
   })
 
-  ipcMain.handle('project:save', async (_event, suggestedName: string, content: string) => {
+  ipcMain.handle('project:save', async (_event, options: SaveProjectFileOptions) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)
     const result = await dialog.showSaveDialog({
       title: 'プロジェクトを保存',
-      defaultPath: join(paths.projects, suggestedName),
-      filters: [{ name: 'Tone Bone Project', extensions: ['json'] }]
+      defaultPath: join(paths.projects, options.suggestedName),
+      filters: options.filters
     })
     if (result.canceled || !result.filePath) {
       return { canceled: true }
     }
-    writeFileSync(result.filePath, content, 'utf-8')
+    writeFileSync(result.filePath, options.content, 'utf-8')
     return { canceled: false, filePath: result.filePath }
   })
 
@@ -122,13 +126,13 @@ function registerIpcHandlers(): void {
     return { canceled: false, filePath }
   })
 
-  ipcMain.handle('project:open', async () => {
+  ipcMain.handle('project:open', async (_event, options: OpenProjectFileOptions) => {
     const current = settingsRepo.load()
     const paths = getWorkspacePaths(current.workspaceDir)
     const result = await dialog.showOpenDialog({
       title: 'プロジェクトを開く',
       defaultPath: paths.projects,
-      filters: [{ name: 'Tone Bone Project', extensions: ['json'] }],
+      filters: options.filters,
       properties: ['openFile']
     })
     if (result.canceled || result.filePaths.length === 0) {

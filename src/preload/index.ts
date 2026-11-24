@@ -1,13 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { AppSettings, WorkspaceFolderTarget } from '@core/types'
-import type { ExportFileOptions } from '@platform/types'
+import type {
+  ExportFileOptions,
+  OpenProjectFileOptions,
+  SaveProjectFileOptions
+} from '@platform/types'
 
 contextBridge.exposeInMainWorld('tonebone', {
-  saveProjectFile: (suggestedName: string, content: string) =>
-    ipcRenderer.invoke('project:save', suggestedName, content),
+  saveProjectFile: (options: SaveProjectFileOptions) =>
+    ipcRenderer.invoke('project:save', options),
   writeProjectFile: (filePath: string, content: string) =>
     ipcRenderer.invoke('project:write', filePath, content),
-  openProjectFile: () => ipcRenderer.invoke('project:open'),
+  openProjectFile: (options: OpenProjectFileOptions) =>
+    ipcRenderer.invoke('project:open', options),
   saveExportFile: (options: ExportFileOptions) => ipcRenderer.invoke('audio:saveExport', options),
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: AppSettings) => ipcRenderer.invoke('settings:save', settings),

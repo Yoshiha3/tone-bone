@@ -5,7 +5,14 @@ import type {
   ThemePack,
   WorkspaceFolderTarget
 } from '@core/types'
-import type { ExportFileOptions, OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
+import type {
+  ExportFileOptions,
+  OpenFileResult,
+  OpenProjectFileOptions,
+  PlatformAdapter,
+  SaveFileResult,
+  SaveProjectFileOptions
+} from './types'
 
 declare global {
   interface Window {
@@ -21,16 +28,16 @@ export class ElectronPlatformAdapter implements PlatformAdapter {
     return window.tonebone
   }
 
-  saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult> {
-    return this.bridge.saveProjectFile(suggestedName, content)
+  saveProjectFile(options: SaveProjectFileOptions): Promise<SaveFileResult> {
+    return this.bridge.saveProjectFile(options)
   }
 
   writeProjectFile(filePath: string, content: string): Promise<SaveFileResult> {
     return this.bridge.writeProjectFile(filePath, content)
   }
 
-  openProjectFile(): Promise<OpenFileResult> {
-    return this.bridge.openProjectFile()
+  openProjectFile(options: OpenProjectFileOptions): Promise<OpenFileResult> {
+    return this.bridge.openProjectFile(options)
   }
 
   saveExportFile(options: ExportFileOptions): Promise<SaveFileResult> {

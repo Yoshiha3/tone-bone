@@ -6,7 +6,14 @@ import {
   type SoundPack,
   type ThemePack
 } from '@core/types'
-import type { ExportFileOptions, OpenFileResult, PlatformAdapter, SaveFileResult } from './types'
+import type {
+  ExportFileOptions,
+  OpenFileResult,
+  OpenProjectFileOptions,
+  PlatformAdapter,
+  SaveFileResult,
+  SaveProjectFileOptions
+} from './types'
 
 interface StoredMemoryProject {
   content: string
@@ -48,6 +55,8 @@ function summarizeMemoryProject(filePath: string, entry: StoredMemoryProject): P
 export class MemoryPlatformAdapter implements PlatformAdapter {
   lastSavedProjectContent: string | null = null
   lastSavedProjectPath: string | null = null
+  lastSaveProjectFilters: SaveProjectFileOptions['filters'] | null = null
+  lastOpenProjectFilters: OpenProjectFileOptions['filters'] | null = null
   lastSavedExportBytes: Uint8Array | null = null
   lastSavedExportPath: string | null = null
   lastSavedExportExtension: string | null = null
@@ -80,12 +89,16 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     return this.clock
   }
 
-  async saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult> {
+  async saveProjectFile(options: SaveProjectFileOptions): Promise<SaveFileResult> {
     this.saveDialogCount++
-    const filePath = `${this.settings.workspaceDir}/projects/${suggestedName}`
+    this.lastSaveProjectFilters = options.filters
+    const filePath = `${this.settings.workspaceDir}/projects/${options.suggestedName}`
     this.lastSavedProjectPath = filePath
-    this.lastSavedProjectContent = content
-    this.workspaceFiles.set(filePath, { content, updatedAtMs: this.nextTimestamp() })
+    this.lastSavedProjectContent = options.content
+    this.workspaceFiles.set(filePath, {
+      content: options.content,
+      updatedAtMs: this.nextTimestamp()
+    })
     return { canceled: false, filePath }
   }
 
@@ -97,7 +110,8 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     return { canceled: false, filePath }
   }
 
-  async openProjectFile(): Promise<OpenFileResult> {
+  async openProjectFile(options: OpenProjectFileOptions): Promise<OpenFileResult> {
+    this.lastOpenProjectFilters = options.filters
     if (this.lastSavedProjectContent === null) {
       return { canceled: true }
     }

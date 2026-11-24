@@ -17,6 +17,21 @@ export interface OpenFileResult {
   content?: string
 }
 
+export interface FileFilter {
+  name: string
+  extensions: string[]
+}
+
+export interface SaveProjectFileOptions {
+  suggestedName: string
+  content: string
+  filters: FileFilter[]
+}
+
+export interface OpenProjectFileOptions {
+  filters: FileFilter[]
+}
+
 export interface ExportFileOptions {
   suggestedName: string
   filterName: string
@@ -25,9 +40,9 @@ export interface ExportFileOptions {
 }
 
 export interface PlatformAdapter {
-  saveProjectFile(suggestedName: string, content: string): Promise<SaveFileResult>
+  saveProjectFile(options: SaveProjectFileOptions): Promise<SaveFileResult>
   writeProjectFile(filePath: string, content: string): Promise<SaveFileResult>
-  openProjectFile(): Promise<OpenFileResult>
+  openProjectFile(options: OpenProjectFileOptions): Promise<OpenFileResult>
   saveExportFile(options: ExportFileOptions): Promise<SaveFileResult>
   loadSettings(): Promise<AppSettings>
   saveSettings(settings: AppSettings): Promise<AppSettings>
