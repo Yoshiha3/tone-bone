@@ -34,7 +34,7 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(lastAppliedThemeBg).toBe('#f6f7f9')
 
     // Switch theme to Minimal Dark alone (Minimal Light disabled) — all built-in sounds stay intact!
-    await store.getState().setActiveThemePackIds(['minimal-dark'])
+    await store.getState().updateSettings({ activeThemePackIds: ['minimal-dark'] })
     expect(lastAppliedThemeBg).toBe('#16191f')
     expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'soft-sine')).toBe(true)
     expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'glass-bell')).toBe(true)
@@ -54,7 +54,7 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
       velocity: 0.8
     })
     expect(store.getState().lastNoteDurationTick).toBe(tripletStep)
-    await store.getState().setNoteLengthMode('grid-step')
+    await store.getState().updateSettings({ noteLengthMode: 'grid-step' })
     expect(store.getState().settings.noteLengthMode).toBe('grid-step')
     const n2 = store.getState().addNote(trackId, {
       pitch: 64,
@@ -193,7 +193,7 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(store.getState().workspaceProjects[0].bpm).toBe(140)
 
     // Switch to manual save mode: leaving while dirty supports cancel, discard, and save
-    await store.getState().setSaveMode('manual')
+    await store.getState().updateSettings({ saveMode: 'manual' })
     expect(await store.getState().openWorkspaceProject(renamedSummary.filePath)).toBe(true)
     store.getState().setBpm(95)
     expect(store.getState().isDirty).toBe(true)

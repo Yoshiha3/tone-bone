@@ -112,7 +112,7 @@ describe('Store Slices: settingsSlice', () => {
     })
 
     await store.getState().initialize()
-    await store.getState().setActiveSoundPackIds(['extra'])
+    await store.getState().updateSettings({ activeSoundPackIds: ['extra'] })
     expect(store.getState().settings.activeSoundPackIds).toEqual(['default-sounds', 'extra'])
     expect(store.getState().mergedSounds.instruments.some((i) => i.id === 'warm-pad')).toBe(true)
 

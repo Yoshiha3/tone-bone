@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { GRID_DIVISIONS, MAX_BARS, type GridDivision } from '@core/types'
 import {
-  exportCurrentProjectWav,
+  exportCurrentProject,
   requestNewProject,
   requestOpenExternalProject,
   requestReturnToHome,
@@ -38,7 +38,7 @@ export function TransportBar() {
     if (exporting) return
     setExporting(true)
     try {
-      await exportCurrentProjectWav()
+      await exportCurrentProject()
     } finally {
       setExporting(false)
     }

@@ -5,7 +5,7 @@ import { PackListPanel } from './PackListPanel'
 export function SoundPacksSettingsTab() {
   const availableSoundPacks = useProjectStore((s) => s.availableSoundPacks)
   const activeSoundPackIds = useProjectStore((s) => s.settings.activeSoundPackIds)
-  const setActiveSoundPackIds = useProjectStore((s) => s.setActiveSoundPackIds)
+  const updateSettings = useProjectStore((s) => s.updateSettings)
   const reloadSoundPacks = useProjectStore((s) => s.reloadSoundPacks)
   const openFolder = useProjectStore((s) => s.openFolder)
 
@@ -17,7 +17,7 @@ export function SoundPacksSettingsTab() {
       hint="標準ベース音源は常に有効です。ユーザー追加の音源パックを上に重ねて音色を追加・上書きできます。"
       folderButtonLabel="音源フォルダを開く"
       testIdPrefix="sound"
-      onChangeActiveIds={(ids) => void setActiveSoundPackIds(ids)}
+      onChangeActiveIds={(ids) => void updateSettings({ activeSoundPackIds: ids })}
       onOpenFolder={() => void openFolder('sounds')}
       onReload={() => void reloadSoundPacks()}
     />

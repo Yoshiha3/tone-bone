@@ -4,7 +4,7 @@ import { PackListPanel } from './PackListPanel'
 export function ThemeSettingsTab() {
   const availableThemePacks = useProjectStore((s) => s.availableThemePacks)
   const activeThemePackIds = useProjectStore((s) => s.settings.activeThemePackIds)
-  const setActiveThemePackIds = useProjectStore((s) => s.setActiveThemePackIds)
+  const updateSettings = useProjectStore((s) => s.updateSettings)
   const reloadThemePacks = useProjectStore((s) => s.reloadThemePacks)
   const openFolder = useProjectStore((s) => s.openFolder)
 
@@ -15,7 +15,7 @@ export function ThemeSettingsTab() {
       hint="配色・フォント・Stage Mode の見た目を変更します。上にあるパックほど優先して適用されます（音源には影響しません）。"
       folderButtonLabel="テーマフォルダを開く"
       testIdPrefix="theme"
-      onChangeActiveIds={(ids) => void setActiveThemePackIds(ids)}
+      onChangeActiveIds={(ids) => void updateSettings({ activeThemePackIds: ids })}
       onOpenFolder={() => void openFolder('themes')}
       onReload={() => void reloadThemePacks()}
     />

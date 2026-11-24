@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   exportCurrentProject,
-  exportCurrentProjectWav,
   requestNewProject,
   requestOpenExternalProject,
   requestReturnToHome,
@@ -116,7 +115,7 @@ describe('actions', () => {
       project: { ...s.project, title: 'Demo:Mix' }
     }))
 
-    expect(await exportCurrentProjectWav()).toBe(true)
+    expect(await exportCurrentProject()).toBe(true)
     expect(exportSpy).toHaveBeenCalledTimes(1)
     expect(saveExportSpy).toHaveBeenCalledWith({
       suggestedName: 'Demo_Mix.wav',

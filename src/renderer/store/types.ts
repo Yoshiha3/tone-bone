@@ -7,10 +7,8 @@ import type {
   MergedSoundConfig,
   MergedThemeConfig,
   Note,
-  NoteLengthMode,
   Project,
   ProjectSummary,
-  SaveMode,
   SoundPack,
   ThemePack,
   Track,
@@ -66,10 +64,6 @@ export interface SettingsSlice {
   reloadThemePacks(): Promise<void>
   reloadSoundPacks(): Promise<void>
   updateSettings(patch: Partial<AppSettings>): Promise<void>
-  setActiveThemePackIds(packIds: string[]): Promise<void>
-  setActiveSoundPackIds(packIds: string[]): Promise<void>
-  setNoteLengthMode(mode: NoteLengthMode): Promise<void>
-  setSaveMode(mode: SaveMode): Promise<void>
   chooseWorkspaceDir(): Promise<void>
   openFolder(target: WorkspaceFolderTarget): Promise<void>
 }

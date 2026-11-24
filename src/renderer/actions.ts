@@ -81,7 +81,3 @@ export async function exportCurrentProject(exporterId?: string): Promise<boolean
   })
   return !result.canceled
 }
-
-export async function exportCurrentProjectWav(): Promise<boolean> {
-  return exportCurrentProject('wav-pcm16')
-}

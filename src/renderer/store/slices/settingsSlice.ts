@@ -82,22 +82,6 @@ export function createSettingsSlice(
       }
     },
 
-    async setActiveThemePackIds(packIds) {
-      await get().updateSettings({ activeThemePackIds: packIds })
-    },
-
-    async setActiveSoundPackIds(packIds) {
-      await get().updateSettings({ activeSoundPackIds: packIds })
-    },
-
-    async setNoteLengthMode(mode) {
-      await get().updateSettings({ noteLengthMode: mode })
-    },
-
-    async setSaveMode(mode) {
-      await get().updateSettings({ saveMode: mode })
-    },
-
     async chooseWorkspaceDir() {
       const chosen = await deps.platform.chooseWorkspaceDir()
       if (!chosen) return
