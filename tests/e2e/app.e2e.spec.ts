@@ -25,8 +25,12 @@ test.describe('Tone Bone Electron E2E', () => {
       })
     )
 
+    const launchEnv = { ...process.env }
+    delete launchEnv.ELECTRON_RUN_AS_NODE
+
     const electronApp = await electron.launch({
-      args: [appPath, `--user-data-dir=${tempUserData}`]
+      args: [appPath, `--user-data-dir=${tempUserData}`],
+      env: launchEnv as Record<string, string>
     })
 
     const pageErrors: string[] = []
