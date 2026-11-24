@@ -124,11 +124,15 @@ describe('SaveStrategy (pluggable persistence policies)', () => {
     expect(askLeaveDecision).toHaveBeenCalledTimes(callsBeforeClean)
   })
 
-  it('registers auto (default) and manual strategies in SaveStrategyRegistry', () => {
+  it('registers auto (default) and manual strategies in SaveStrategyRegistry with UI metadata', () => {
     const registry = createDefaultSaveStrategyRegistry(800)
     expect(registry.list().map((s) => s.id)).toEqual(['auto', 'manual'])
     expect(registry.get('auto').id).toBe('auto')
+    expect(registry.get('auto').flushesSilentlyOnClose).toBe(true)
+    expect(registry.get('auto').description.length).toBeGreaterThan(0)
     expect(registry.get('manual').id).toBe('manual')
+    expect(registry.get('manual').flushesSilentlyOnClose).toBe(false)
+    expect(registry.get('manual').description.length).toBeGreaterThan(0)
     registry.disposeAll()
   })
 })

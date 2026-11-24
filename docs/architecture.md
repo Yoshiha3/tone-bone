@@ -28,7 +28,7 @@ flowchart TD
 
 | ディレクトリ | 責務 | 主なファイル |
 | :--- | :--- | :--- |
-| `src/core/` | 音楽ドメイン型・時間計算・編集ロジック・Undo/Redo（React / Electron / Web Audio 非依存） | `types.ts`, `musicMath.ts`, `history.ts`, `demoProject.ts` |
+| `src/core/` | 音楽ドメイン型・トラック種別仕様・時間計算・編集ロジック・Undo/Redo（React / Electron / Web Audio 非依存） | `types.ts`, `trackTypes.ts`, `musicMath.ts`, `history.ts`, `demoProject.ts` |
 | `src/codecs/` | プロジェクトの保存・読込フォーマット抽象（差し替え可能） | `types.ts`, `CodecRegistry.ts`, `SimpleJsonV1Codec.ts` |
 | `src/persistence/` | 保存方式（自動保存 / 手動保存）の差し替え可能な戦略モジュール | `types.ts`, `SaveStrategyRegistry.ts`, `DebouncedAutoSaveStrategy.ts`, `ManualSaveStrategy.ts` |
 | `src/packs/` | テーマパック／音源パックの独立優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
