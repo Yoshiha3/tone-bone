@@ -3,9 +3,8 @@ import styles from '../SettingsModal.module.css'
 
 export function EditorSettingsTab() {
   const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
-  const setNoteLengthMode = useProjectStore((s) => s.setNoteLengthMode)
   const saveMode = useProjectStore((s) => s.settings.saveMode)
-  const setSaveMode = useProjectStore((s) => s.setSaveMode)
+  const updateSettings = useProjectStore((s) => s.updateSettings)
 
   return (
     <div className={styles.body}>
@@ -19,7 +18,7 @@ export function EditorSettingsTab() {
             className={`${styles.choiceCard} ${
               noteLengthMode === 'last-used' ? styles.choiceCardSelected : ''
             }`}
-            onClick={() => void setNoteLengthMode('last-used')}
+            onClick={() => void updateSettings({ noteLengthMode: 'last-used' })}
             data-testid="note-len-last-used-btn"
           >
             <span
@@ -45,7 +44,7 @@ export function EditorSettingsTab() {
             className={`${styles.choiceCard} ${
               noteLengthMode === 'grid-step' ? styles.choiceCardSelected : ''
             }`}
-            onClick={() => void setNoteLengthMode('grid-step')}
+            onClick={() => void updateSettings({ noteLengthMode: 'grid-step' })}
             data-testid="note-len-grid-step-btn"
           >
             <span
@@ -76,7 +75,7 @@ export function EditorSettingsTab() {
             className={`${styles.choiceCard} ${
               saveMode === 'auto' ? styles.choiceCardSelected : ''
             }`}
-            onClick={() => void setSaveMode('auto')}
+            onClick={() => void updateSettings({ saveMode: 'auto' })}
             data-testid="save-mode-auto-btn"
           >
             <span
@@ -102,7 +101,7 @@ export function EditorSettingsTab() {
             className={`${styles.choiceCard} ${
               saveMode === 'manual' ? styles.choiceCardSelected : ''
             }`}
-            onClick={() => void setSaveMode('manual')}
+            onClick={() => void updateSettings({ saveMode: 'manual' })}
             data-testid="save-mode-manual-btn"
           >
             <span

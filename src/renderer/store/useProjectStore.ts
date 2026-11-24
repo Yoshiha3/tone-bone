@@ -12,26 +12,18 @@ import {
 } from '@core/history'
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
 import {
-  DEFAULT_SOUND_PACK_ID,
-  DEFAULT_THEME_PACK_ID,
   DRUM_LANES,
   MAX_BARS,
-  PPQN,
   TICKS_PER_BAR,
-  type AppSettings,
   type Note,
   type Track
 } from '@core/types'
 import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
 import { createDefaultSaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
-import type { LeaveDecision } from '@persistence/types'
 import { ElectronPlatformAdapter } from '@platform/ElectronPlatformAdapter'
-import {
-  createId,
-  createSliceRuntime,
-  INITIAL_MERGED_SOUNDS,
-  INITIAL_MERGED_THEME
-} from './helpers'
+import { createId, createSliceRuntime } from './helpers'
+import { createSettingsSlice } from './slices/settingsSlice'
+import { createUiSlice } from './slices/uiSlice'
 import type {
   ProjectStoreDeps,
   ProjectStoreState,
@@ -51,43 +43,18 @@ export function createProjectStore(deps: ProjectStoreDeps) {
   const saveStrategies = deps.saveStrategies ?? createDefaultSaveStrategyRegistry()
 
   return createStore<ProjectStoreState>((set, get) => {
-    const { createSaveContext, notifyProjectChanged, commit } = createSliceRuntime(
-      set,
-      get,
-      deps,
-      saveStrategies
-    )
+    const runtime = createSliceRuntime(set, get, deps, saveStrategies)
+    const { createSaveContext, notifyProjectChanged, commit } = runtime
 
     return {
+      ...createUiSlice(set, get, initialProject.tracks[0]?.id ?? ''),
+      ...createSettingsSlice(set, get, runtime),
       history: createHistory(initialProject),
       project: initialProject,
-      selectedTrackId: initialProject.tracks[0]?.id ?? '',
-      selectedNoteIds: [],
-      clipboardNotes: [],
-      gridDivision: '1/16',
-      lastNoteDurationTick: PPQN / 2,
-      viewMode: 'home',
-      settingsOpen: false,
-      isPlaying: false,
       isAutoSaving: false,
-      statusMessage: null,
       currentFilePath: null,
       isDirty: false,
-
-      settings: {
-        workspaceDir: '',
-        activeThemePackIds: [DEFAULT_THEME_PACK_ID],
-        activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
-        noteLengthMode: 'last-used',
-        saveMode: 'auto'
-      },
-      availableThemePacks: [],
-      mergedTheme: INITIAL_MERGED_THEME,
-      availableSoundPacks: [],
-      mergedSounds: INITIAL_MERGED_SOUNDS,
       workspaceProjects: [],
-      selectedHomeProjectPath: null,
-      unsavedPrompt: null,
 
       async initialize() {
         try {
@@ -120,29 +87,6 @@ export function createProjectStore(deps: ProjectStoreDeps) {
         }
       },
 
-      async reloadThemePacks() {
-        const themePacks = await deps.platform.listThemePacks()
-        const { settings } = get()
-        const mergedTheme = mergeThemePacks(themePacks, settings.activeThemePackIds)
-        set({
-          availableThemePacks: themePacks,
-          mergedTheme,
-          statusMessage: 'テーマパックを再読み込みしました'
-        })
-        deps.onThemeChanged?.(mergedTheme)
-      },
-
-      async reloadSoundPacks() {
-        const soundPacks = await deps.platform.listSoundPacks()
-        const { settings } = get()
-        const mergedSounds = mergeSoundPacks(soundPacks, settings.activeSoundPackIds)
-        set({
-          availableSoundPacks: soundPacks,
-          mergedSounds,
-          statusMessage: '音源パックを再読み込みしました'
-        })
-      },
-
       async refreshWorkspaceProjects() {
         try {
           const projects = await deps.platform.listWorkspaceProjects()
@@ -159,65 +103,6 @@ export function createProjectStore(deps: ProjectStoreDeps) {
           })
         }
       },
-
-      async setActiveThemePackIds(packIds) {
-        const { availableThemePacks, settings } = get()
-        const mergedTheme = mergeThemePacks(availableThemePacks, packIds)
-        const nextSettings: AppSettings = {
-          ...settings,
-          activeThemePackIds: mergedTheme.activeThemePackIds
-        }
-        await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings, mergedTheme })
-        deps.onThemeChanged?.(mergedTheme)
-      },
-
-      async setActiveSoundPackIds(packIds) {
-        const { availableSoundPacks, settings } = get()
-        const mergedSounds = mergeSoundPacks(availableSoundPacks, packIds)
-        const nextSettings: AppSettings = {
-          ...settings,
-          activeSoundPackIds: mergedSounds.activeSoundPackIds
-        }
-        await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings, mergedSounds })
-      },
-
-      async setNoteLengthMode(mode) {
-        const { settings } = get()
-        const nextSettings: AppSettings = { ...settings, noteLengthMode: mode }
-        await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings })
-      },
-
-      async setSaveMode(mode) {
-        saveStrategies.disposeAll()
-        const { settings } = get()
-        const nextSettings: AppSettings = { ...settings, saveMode: mode }
-        await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings })
-        if (mode === 'auto' && get().isDirty && get().currentFilePath) {
-          notifyProjectChanged()
-        }
-      },
-
-      async chooseWorkspaceDir() {
-        const chosen = await deps.platform.chooseWorkspaceDir()
-        if (!chosen) return
-        const { settings } = get()
-        const nextSettings: AppSettings = { ...settings, workspaceDir: chosen }
-        await deps.platform.saveSettings(nextSettings)
-        set({ settings: nextSettings, statusMessage: '保存先フォルダを変更しました' })
-        await get().reloadThemePacks()
-        await get().reloadSoundPacks()
-        await get().refreshWorkspaceProjects()
-      },
-
-      async openFolder(target) {
-        await deps.platform.openFolder(target)
-      },
-
-      setSelectedHomeProjectPath: (selectedHomeProjectPath) => set({ selectedHomeProjectPath }),
 
       async openWorkspaceProject(filePath) {
         saveStrategies.disposeAll()
@@ -326,23 +211,6 @@ export function createProjectStore(deps: ProjectStoreDeps) {
           })
           return false
         }
-      },
-
-      requestLeaveDecision(prompt) {
-        const existing = get().unsavedPrompt
-        if (existing) {
-          existing.resolve('cancel')
-        }
-        return new Promise<LeaveDecision>((resolve) => {
-          set({ unsavedPrompt: { ...prompt, resolve } })
-        })
-      },
-
-      resolveLeaveDecision(decision) {
-        const current = get().unsavedPrompt
-        if (!current) return
-        set({ unsavedPrompt: null })
-        current.resolve(decision)
       },
 
       async prepareLeaveCurrentProject(askDecision) {
@@ -462,16 +330,6 @@ export function createProjectStore(deps: ProjectStoreDeps) {
           statusMessage: '新規プロジェクトを作成しました'
         })
       },
-
-      setViewMode: (viewMode) => set({ viewMode }),
-      setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
-      setGridDivision: (gridDivision) => set({ gridDivision }),
-      setLastNoteDurationTick: (ticks) =>
-        set({ lastNoteDurationTick: Math.max(30, Math.round(ticks)) }),
-      setIsPlaying: (isPlaying) => set({ isPlaying }),
-      setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId, selectedNoteIds: [] }),
-      setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
-      clearStatusMessage: () => set({ statusMessage: null }),
 
       setTitle: (title) => {
         const trimmed = title.trim()
