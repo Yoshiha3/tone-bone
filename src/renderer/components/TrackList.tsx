@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { TRACK_TYPES } from '@core/trackTypes'
 import { useProjectStore } from '../store/useProjectStore'
 import styles from './TrackList.module.css'
 
@@ -34,22 +35,17 @@ export function TrackList() {
       <div className={styles.header}>
         <span className={styles.heading}>Tracks</span>
         <div className={styles.addButtons}>
-          <button
-            type="button"
-            className={styles.smallBtn}
-            onClick={() => addTrack('synth')}
-            data-testid="add-synth-track-btn"
-          >
-            + Synth
-          </button>
-          <button
-            type="button"
-            className={styles.smallBtn}
-            onClick={() => addTrack('drum')}
-            data-testid="add-drum-track-btn"
-          >
-            + Drum
-          </button>
+          {TRACK_TYPES.map((spec) => (
+            <button
+              key={spec.type}
+              type="button"
+              className={styles.smallBtn}
+              onClick={() => addTrack(spec.type)}
+              data-testid={`add-${spec.type}-track-btn`}
+            >
+              {spec.addButtonLabel}
+            </button>
+          ))}
         </div>
       </div>
 

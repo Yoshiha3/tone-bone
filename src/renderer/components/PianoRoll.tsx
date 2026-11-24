@@ -6,6 +6,7 @@ import {
   moveNotes,
   snapTick
 } from '@core/musicMath'
+import { getTrackTypeSpec, TRACK_TYPE_SPECS } from '@core/trackTypes'
 import type { Note } from '@core/types'
 import { audioEngine } from '../audioContext'
 import { projectStore, useProjectStore } from '../store/useProjectStore'
@@ -78,7 +79,8 @@ export function PianoRoll() {
   const themeRef = useRef<ThemeTokens>(readThemeTokens())
 
   const track = project.tracks.find((t) => t.id === selectedTrackId) ?? project.tracks[0]
-  const isDrum = track?.type === 'drum'
+  const trackSpec = track ? getTrackTypeSpec(track.type) : TRACK_TYPE_SPECS.synth
+  const isDrum = trackSpec.usesDrumLanes
 
   const metrics = useMemo(
     () => createPianoRollMetrics(Boolean(isDrum), project.bars, pxPerBeat),
@@ -163,9 +165,9 @@ export function PianoRoll() {
         nextSelected = [hit.note.id]
       }
       setSelectedNoteIds(nextSelected)
-      if (!isDrum) setLastNoteDurationTick(hit.note.durationTick)
+      if (trackSpec.remembersLastNoteDuration) setLastNoteDurationTick(hit.note.durationTick)
 
-      if (hit.isRightEdge && !isDrum) {
+      if (hit.isRightEdge && trackSpec.supportsNoteResize) {
         dragRef.current = { kind: 'resize', noteId: hit.note.id, origStart: hit.note.startTick }
       } else {
         dragRef.current = {
@@ -202,13 +204,16 @@ export function PianoRoll() {
       floorTickToGrid(contentXToTick(contentX, metrics), gridDivision)
     )
     const pitch = contentYToPitch(contentY, metrics)
-    const preferredDuration = !isDrum && noteLengthMode === 'last-used' ? lastNoteDurationTick : step
+    const preferredDuration =
+      trackSpec.remembersLastNoteDuration && noteLengthMode === 'last-used'
+        ? lastNoteDurationTick
+        : step
     const durationTick = Math.max(30, Math.min(metrics.totalTicks - startTick, preferredDuration))
     const created = addNote(track.id, { pitch, startTick, durationTick, velocity: 0.8 })
     setSelectedNoteIds([created.id])
     audioEngine.previewNote(track, pitch, 0.18)
 
-    if (!isDrum) {
+    if (trackSpec.supportsNoteResize) {
       dragRef.current = {
         kind: 'create',
         noteId: created.id,

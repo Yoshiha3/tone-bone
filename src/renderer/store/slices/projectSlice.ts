@@ -7,14 +7,8 @@ import {
   undoHistory
 } from '@core/history'
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
-import {
-  DRUM_LANES,
-  MAX_BARS,
-  TICKS_PER_BAR,
-  type Note,
-  type Project,
-  type Track
-} from '@core/types'
+import { getTrackTypeSpec } from '@core/trackTypes'
+import { MAX_BARS, TICKS_PER_BAR, type Note, type Project, type Track } from '@core/types'
 import { createId } from '../helpers'
 import type { ProjectSlice, SliceRuntime, StoreGet, StoreSet } from '../types'
 
@@ -41,15 +35,13 @@ export function createProjectSlice(
 
     addTrack: (type) => {
       const { project, mergedSounds } = get()
+      const spec = getTrackTypeSpec(type)
       const matchingInst = mergedSounds.instruments.find((i) => i.type === type)
       const newTrack: Track = {
         id: createId('track'),
-        name:
-          type === 'drum'
-            ? `Rhythm ${project.tracks.length + 1}`
-            : `Synth ${project.tracks.length + 1}`,
+        name: `${spec.defaultNamePrefix} ${project.tracks.length + 1}`,
         type,
-        instrumentId: matchingInst?.id ?? (type === 'drum' ? 'basic-kit' : 'soft-sine'),
+        instrumentId: matchingInst?.id ?? spec.defaultInstrumentId,
         colorIndex: project.tracks.length % 6,
         volume: 0.78,
         muted: false,
@@ -100,7 +92,7 @@ export function createProjectSlice(
           t.id === trackId ? { ...t, notes: [...t.notes, note] } : t
         )
       }))
-      if (track?.type === 'synth') {
+      if (track && getTrackTypeSpec(track.type).remembersLastNoteDuration) {
         set({ lastNoteDurationTick: Math.max(30, Math.round(note.durationTick)) })
       }
       return note
@@ -116,7 +108,11 @@ export function createProjectSlice(
             : t
         )
       }))
-      if (track?.type === 'synth' && typeof patch.durationTick === 'number') {
+      if (
+        track &&
+        getTrackTypeSpec(track.type).remembersLastNoteDuration &&
+        typeof patch.durationTick === 'number'
+      ) {
         set({ lastNoteDurationTick: Math.max(30, Math.round(patch.durationTick)) })
       }
     },
@@ -151,8 +147,9 @@ export function createProjectSlice(
       if (selectedNoteIds.length === 0 || (deltaTick === 0 && deltaPitch === 0)) return
       const track = project.tracks.find((t) => t.id === selectedTrackId)
       if (!track) return
-      const minPitch = track.type === 'drum' ? 0 : 24
-      const maxPitch = track.type === 'drum' ? DRUM_LANES.length - 1 : 96
+      const spec = getTrackTypeSpec(track.type)
+      const minPitch = spec.minPitch
+      const maxPitch = spec.maxPitch
       const maxTicks = project.bars * TICKS_PER_BAR
       const idSet = new Set(selectedNoteIds)
 

@@ -1,4 +1,5 @@
 import { secondsToTicks, ticksToSeconds } from '@core/musicMath'
+import { getTrackTypeSpec } from '@core/trackTypes'
 import { TICKS_PER_BAR, type InstrumentDef, type Project, type Track } from '@core/types'
 import { collectScheduledNotes } from './scheduler'
 import type { NoteTriggerEvent } from './types'
@@ -158,7 +159,7 @@ export class AudioEngine {
       pitch,
       startTime: now,
       durationSeconds,
-      velocity: track.type === 'drum' ? 0.85 : 0.8,
+      velocity: getTrackTypeSpec(track.type).previewVelocity,
       instrument
     })
   }

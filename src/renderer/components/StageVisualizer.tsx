@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { getTrackTypeSpec } from '@core/trackTypes'
 import { pitchToVisualYRatio } from '@visualizers/canvasUtils'
 import { createDefaultVisualizerRegistry } from '@visualizers/VisualizerRegistry'
 import type { ActiveRipple } from '@visualizers/types'
@@ -35,7 +36,10 @@ export function StageVisualizer() {
     const unsubscribe = audioEngine.onNoteTrigger((evt) => {
       const colors = paletteRef.current
       const track = project.tracks.find((t) => t.id === evt.trackId)
-      const yRatio = pitchToVisualYRatio(evt.note.pitch, track?.type === 'drum')
+      const yRatio = pitchToVisualYRatio(
+        evt.note.pitch,
+        track ? getTrackTypeSpec(track.type).usesDrumLanes : false
+      )
 
       ripplesRef.current.push({
         xRatio: 0.28,

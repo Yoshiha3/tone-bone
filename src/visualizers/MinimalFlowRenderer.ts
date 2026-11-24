@@ -1,4 +1,5 @@
 import { getAudibleTrackIds } from '@core/musicMath'
+import { getTrackTypeSpec } from '@core/trackTypes'
 import { PPQN, TICKS_PER_BAR, type VisualizerPreset } from '@core/types'
 import { drawRoundedRect, pitchToVisualYRatio } from './canvasUtils'
 import type { VisualizerFrameState, VisualizerRenderer } from './types'
@@ -67,7 +68,7 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
     for (const track of project.tracks) {
       if (!audibleIds.has(track.id)) continue
       const color = trackColors[track.colorIndex % trackColors.length] ?? preset.waveColor
-      const isDrum = track.type === 'drum'
+      const isDrum = getTrackTypeSpec(track.type).usesDrumLanes
 
       for (const offset of loopOffsets) {
         for (const note of track.notes) {
