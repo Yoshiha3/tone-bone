@@ -14,16 +14,15 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@codecs/*": ["src/codecs/*"],
-      "@packs/*": ["src/packs/*"],
-      "@audio/*": ["src/audio/*"],
-      "@visualizers/*": ["src/visualizers/*"],
-      "@platform/*": ["src/platform/*"],
-      "@persistence/*": ["src/persistence/*"],
-      "@renderer/*": ["src/renderer/*"]
+      "@core/*": ["./src/core/*"],
+      "@codecs/*": ["./src/codecs/*"],
+      "@packs/*": ["./src/packs/*"],
+      "@audio/*": ["./src/audio/*"],
+      "@visualizers/*": ["./src/visualizers/*"],
+      "@platform/*": ["./src/platform/*"],
+      "@persistence/*": ["./src/persistence/*"],
+      "@renderer/*": ["./src/renderer/*"]
     }
   },
   "include": ["src", "tests", "electron.vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
