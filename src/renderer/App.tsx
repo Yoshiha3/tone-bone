@@ -9,6 +9,7 @@ import { StageVisualizer } from './components/StageVisualizer'
 import { TrackList } from './components/TrackList'
 import { TransportBar } from './components/TransportBar'
 import { UnsavedChangesModal } from './components/UnsavedChangesModal'
+import { dispatchKeyboardShortcut } from './shortcuts'
 import {
   defaultSaveStrategyRegistry,
   projectStore,
@@ -52,83 +53,35 @@ export function App() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [])
 
-  // Global keyboard shortcuts (cross-platform Cmd/Ctrl)
+  // Global keyboard shortcuts (declarative table in shortcuts.ts)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
       const target = e.target as HTMLElement | null
-      const isInput =
+      const isTextInput =
         target?.tagName === 'INPUT' ||
         target?.tagName === 'TEXTAREA' ||
         target?.tagName === 'SELECT'
 
-      const state = projectStore.getState()
-      const mod = e.metaKey || e.ctrlKey
-
-      if (e.key === 'Escape') {
-        if (state.unsavedPrompt) state.resolveLeaveDecision('cancel')
-        else if (state.settingsOpen) state.setSettingsOpen(false)
-        else if (state.viewMode === 'stage') state.setViewMode('edit')
-        return
-      }
-
-      if (isInput || state.settingsOpen || state.unsavedPrompt) return
-
-      if (state.viewMode === 'home') {
-        if (mod && e.key.toLowerCase() === 'n') {
-          e.preventDefault()
-          void requestNewProject()
-          return
+      const result = dispatchKeyboardShortcut(
+        {
+          key: e.key,
+          code: e.code,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+          isTextInput
+        },
+        {
+          state: projectStore.getState(),
+          actions: {
+            togglePlayPause,
+            requestNewProject,
+            getCurrentTick: () => audioEngine.getCurrentTick()
+          }
         }
-        if (e.key === 'Enter' && state.selectedHomeProjectPath) {
-          e.preventDefault()
-          void state.openWorkspaceProject(state.selectedHomeProjectPath)
-        }
-        return
-      }
-
-      if (e.code === 'Space') {
+      )
+      if (result.preventDefault) {
         e.preventDefault()
-        togglePlayPause()
-        return
-      }
-
-      if (state.viewMode !== 'edit') return
-
-      if (mod && e.key.toLowerCase() === 'z') {
-        e.preventDefault()
-        if (e.shiftKey) state.redo()
-        else state.undo()
-        return
-      }
-
-      if (mod && e.key.toLowerCase() === 'c') {
-        e.preventDefault()
-        state.copySelectedNotes()
-        return
-      }
-
-      if (mod && e.key.toLowerCase() === 'v') {
-        e.preventDefault()
-        state.pasteNotes(Math.round(audioEngine.getCurrentTick()))
-        return
-      }
-
-      if (mod && e.key.toLowerCase() === 'n') {
-        e.preventDefault()
-        void requestNewProject()
-        return
-      }
-
-      if (mod && e.key.toLowerCase() === 's') {
-        e.preventDefault()
-        if (e.shiftKey) void state.saveProjectAs()
-        else void state.saveProject()
-        return
-      }
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault()
-        state.deleteSelectedNotes()
       }
     }
 

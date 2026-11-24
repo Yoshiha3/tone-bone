@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ComponentType } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import { EditorSettingsTab } from './settings/EditorSettingsTab'
 import { SoundPacksSettingsTab } from './settings/SoundPacksSettingsTab'
@@ -6,21 +6,35 @@ import { StorageSettingsTab } from './settings/StorageSettingsTab'
 import { ThemeSettingsTab } from './settings/ThemeSettingsTab'
 import styles from './SettingsModal.module.css'
 
-type SettingsTabId = 'themes' | 'sounds' | 'editor' | 'storage'
+interface SettingsTabDef {
+  readonly id: string
+  readonly label: string
+  readonly testId: string
+  readonly component: ComponentType
+}
 
-const TABS: readonly { id: SettingsTabId; label: string; testId: string }[] = [
-  { id: 'themes', label: 'テーマ', testId: 'tab-themes' },
-  { id: 'sounds', label: '音源パック', testId: 'tab-sounds' },
-  { id: 'editor', label: 'エディタ', testId: 'tab-editor' },
-  { id: 'storage', label: '保存先フォルダ', testId: 'tab-storage' }
-]
+/**
+ * Single source of truth for settings tabs.
+ * Adding a new tab only requires appending an entry to this array.
+ */
+export const SETTINGS_TABS = [
+  { id: 'themes', label: 'テーマ', testId: 'tab-themes', component: ThemeSettingsTab },
+  { id: 'sounds', label: '音源パック', testId: 'tab-sounds', component: SoundPacksSettingsTab },
+  { id: 'editor', label: 'エディタ', testId: 'tab-editor', component: EditorSettingsTab },
+  { id: 'storage', label: '保存先フォルダ', testId: 'tab-storage', component: StorageSettingsTab }
+] as const satisfies readonly SettingsTabDef[]
+
+export type SettingsTabId = (typeof SETTINGS_TABS)[number]['id']
 
 export function SettingsModal() {
   const open = useProjectStore((s) => s.settingsOpen)
   const setSettingsOpen = useProjectStore((s) => s.setSettingsOpen)
-  const [activeTab, setActiveTab] = useState<SettingsTabId>('themes')
+  const [activeTabId, setActiveTabId] = useState<SettingsTabId>(SETTINGS_TABS[0].id)
 
   if (!open) return null
+
+  const activeTab = SETTINGS_TABS.find((t) => t.id === activeTabId) ?? SETTINGS_TABS[0]
+  const ActiveTabComponent = activeTab.component
 
   return (
     <div
@@ -41,12 +55,12 @@ export function SettingsModal() {
         </div>
 
         <div className={styles.tabs}>
-          {TABS.map((tab) => (
+          {SETTINGS_TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
-              className={`${styles.tabBtn} ${activeTab === tab.id ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+              className={`${styles.tabBtn} ${activeTab.id === tab.id ? styles.tabActive : ''}`}
+              onClick={() => setActiveTabId(tab.id)}
               data-testid={tab.testId}
             >
               {tab.label}
@@ -54,10 +68,7 @@ export function SettingsModal() {
           ))}
         </div>
 
-        {activeTab === 'themes' && <ThemeSettingsTab />}
-        {activeTab === 'sounds' && <SoundPacksSettingsTab />}
-        {activeTab === 'editor' && <EditorSettingsTab />}
-        {activeTab === 'storage' && <StorageSettingsTab />}
+        <ActiveTabComponent />
       </div>
     </div>
   )
