@@ -128,4 +128,32 @@ describe('actions', () => {
     saveExportSpy.mockResolvedValueOnce({ canceled: true })
     expect(await exportCurrentProject()).toBe(false)
   })
+
+  it('exports using a custom registered exporter id without modifying actions or platform', async () => {
+    const fakeMidi = new Uint8Array([77, 84, 104, 100])
+    const midiExporter = {
+      id: 'test-midi',
+      label: 'Standard MIDI',
+      extension: 'mid',
+      export: vi.fn(async () => fakeMidi)
+    }
+    audioExporterRegistry.register(midiExporter)
+
+    const saveExportSpy = vi
+      .spyOn(defaultPlatform, 'saveExportFile')
+      .mockResolvedValue({ canceled: false, filePath: '/exports/Demo_Mix.mid' })
+
+    projectStore.setState((s) => ({
+      project: { ...s.project, title: 'Demo:Mix' }
+    }))
+
+    expect(await exportCurrentProject('test-midi')).toBe(true)
+    expect(midiExporter.export).toHaveBeenCalledTimes(1)
+    expect(saveExportSpy).toHaveBeenCalledWith({
+      suggestedName: 'Demo_Mix.mid',
+      filterName: 'Standard MIDI',
+      extension: 'mid',
+      data: fakeMidi
+    })
+  })
 })

@@ -32,7 +32,7 @@ flowchart TD
 | `src/codecs/` | プロジェクトの保存・読込フォーマット抽象（差し替え可能） | `types.ts`, `CodecRegistry.ts`, `SimpleJsonV1Codec.ts` |
 | `src/persistence/` | 保存方式（自動保存 / 手動保存）の差し替え可能な戦略モジュール | `types.ts`, `SaveStrategyRegistry.ts`, `DebouncedAutoSaveStrategy.ts`, `ManualSaveStrategy.ts` |
 | `src/packs/` | テーマパック／音源パックの独立優先順位マージ・表示順変換・CSS 動的適用 | `packMerger.ts`, `packOrder.ts`, `themeApplier.ts` |
-| `src/audio/` | `BaseAudioContext` 共通設計の音源・単調増加スケジューラ・WAV 書き出し | `scheduler.ts`, `AudioEngine.ts`, `voices/`, `exporters/` |
+| `src/audio/` | `BaseAudioContext` 共通設計の音源・レジストリ・単調増加スケジューラ・音声書き出し | `scheduler.ts`, `AudioEngine.ts`, `VoiceRegistry.ts`, `AudioExporterRegistry.ts`, `voices/`, `exporters/` |
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
 | `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
 | `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・プロジェクト/設定/パック永続化 | `main/index.ts`, `projectRepository.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
@@ -73,10 +73,14 @@ flowchart TD
 1. `src/visualizers/` に `VisualizerRenderer`（`id`, `name`, `render(ctx, frame, preset)`）を実装します。
 2. `src/visualizers/VisualizerRegistry.ts` の `createDefaultVisualizerRegistry()` に登録し、テーマパックの `visualizer.json` で `"rendererId": "<登録したID>"` を指定すれば切り替えられます。
 
+### 音源ボイスを追加・差し替える（`AudioVoice`）
+1. `src/audio/voices/` に `AudioVoice`（`type`, `trigger(params)`）を実装したクラスを追加します。
+2. `src/audio/VoiceRegistry.ts` の `createDefaultVoiceRegistry()` に登録すると、リアルタイム再生（`AudioEngine`）とオフライン書き出し（`WavExporter` 等）の両方で自動的に利用されます。
+
 ### 音声書き出し形式を追加する（`AudioExporter`）
-1. `src/audio/exporters/` に `AudioExporter`（`id`, `extension`, `export(project, instruments) => Promise<Uint8Array>`）を実装します。
-2. `SynthVoice` / `DrumVoice` は `BaseAudioContext` 対応のため、`OfflineAudioContext` でリアルタイム再生と完全に同じ音色・バランスをオフラインレンダリングできます。
-   > **現在の制約**：`CodecRegistry` のようなレジストリは未導入であり、現状は `src/renderer/audioContext.ts`・`src/renderer/actions.ts`・`src/platform/`・`src/main/index.ts` が `WavExporter` と `.wav` 保存 IPC（`audio:saveWav`）に直接接続されています。別形式を追加する場合はこれらの接続箇所と UI も併せて拡張する必要があります。
+1. `src/audio/exporters/` に `AudioExporter`（`id`, `label`, `extension`, `export(project, instruments) => Promise<Uint8Array>`）を実装します。
+2. `src/audio/AudioExporterRegistry.ts` の `createDefaultAudioExporterRegistry()` に登録します。
+3. 書き出し処理は `src/renderer/actions.ts` の `exportCurrentProject(exporterId)` と汎用 IPC（`audio:saveExport` / `PlatformAdapter.saveExportFile`）を経由するため、Main プロセスや Preload を修正せずに新形式を書き出せます。`SynthVoice` / `DrumVoice` は `BaseAudioContext` 対応のため、`OfflineAudioContext` でリアルタイム再生と完全に同じ音色・バランスをオフラインレンダリングできます。
 
 ### 設定タブを追加する
 1. `src/renderer/components/settings/` に新しいタブコンポーネントを作成します。
