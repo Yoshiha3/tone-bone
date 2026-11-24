@@ -1,27 +1,34 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
 import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
-import { createDemoProject, createEmptyProject } from '@core/demoProject'
-import { createHistory } from '@core/history'
-import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
+import { createDemoProject } from '@core/demoProject'
 import { createDefaultSaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
 import { ElectronPlatformAdapter } from '@platform/ElectronPlatformAdapter'
 import { createSliceRuntime } from './helpers'
 import { createProjectSlice } from './slices/projectSlice'
 import { createSettingsSlice } from './slices/settingsSlice'
 import { createUiSlice } from './slices/uiSlice'
+import { createWorkspaceSlice } from './slices/workspaceSlice'
 import type {
+  ProjectSlice,
   ProjectStoreDeps,
   ProjectStoreState,
+  SettingsSlice,
+  UiSlice,
   UnsavedChangesPrompt,
-  ViewMode
+  ViewMode,
+  WorkspaceSlice
 } from './types'
 
 export type {
+  ProjectSlice,
   ProjectStoreDeps,
   ProjectStoreState,
+  SettingsSlice,
+  UiSlice,
   UnsavedChangesPrompt,
-  ViewMode
+  ViewMode,
+  WorkspaceSlice
 }
 
 export function createProjectStore(deps: ProjectStoreDeps) {
@@ -30,291 +37,12 @@ export function createProjectStore(deps: ProjectStoreDeps) {
 
   return createStore<ProjectStoreState>((set, get) => {
     const runtime = createSliceRuntime(set, get, deps, saveStrategies)
-    const { createSaveContext } = runtime
 
     return {
       ...createUiSlice(set, get, initialProject.tracks[0]?.id ?? ''),
       ...createSettingsSlice(set, get, runtime),
       ...createProjectSlice(set, get, runtime, initialProject),
-      isAutoSaving: false,
-      currentFilePath: null,
-      isDirty: false,
-      workspaceProjects: [],
-
-      async initialize() {
-        try {
-          const settings = await deps.platform.loadSettings()
-          const [themePacks, soundPacks, projects] = await Promise.all([
-            deps.platform.listThemePacks(),
-            deps.platform.listSoundPacks(),
-            deps.platform.listWorkspaceProjects()
-          ])
-          const mergedTheme = mergeThemePacks(themePacks, settings.activeThemePackIds)
-          const mergedSounds = mergeSoundPacks(soundPacks, settings.activeSoundPackIds)
-          set({
-            settings: {
-              ...settings,
-              activeThemePackIds: mergedTheme.activeThemePackIds,
-              activeSoundPackIds: mergedSounds.activeSoundPackIds
-            },
-            availableThemePacks: themePacks,
-            mergedTheme,
-            availableSoundPacks: soundPacks,
-            mergedSounds,
-            workspaceProjects: projects,
-            selectedHomeProjectPath: projects[0]?.filePath ?? null
-          })
-          deps.onThemeChanged?.(mergedTheme)
-        } catch (err) {
-          set({
-            statusMessage: `初期化エラー: ${err instanceof Error ? err.message : String(err)}`
-          })
-        }
-      },
-
-      async refreshWorkspaceProjects() {
-        try {
-          const projects = await deps.platform.listWorkspaceProjects()
-          const currentSelected = get().selectedHomeProjectPath
-          const stillExists =
-            currentSelected !== null && projects.some((p) => p.filePath === currentSelected)
-          set({
-            workspaceProjects: projects,
-            selectedHomeProjectPath: stillExists ? currentSelected : (projects[0]?.filePath ?? null)
-          })
-        } catch (err) {
-          set({
-            statusMessage: `プロジェクト一覧の取得失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-        }
-      },
-
-      async openWorkspaceProject(filePath) {
-        saveStrategies.disposeAll()
-        try {
-          const result = await deps.platform.readWorkspaceProject(filePath)
-          if (result.canceled || !result.content) {
-            set({ statusMessage: 'プロジェクトを開けませんでした' })
-            return false
-          }
-          const { project } = deps.codecs.decodeAuto(result.content)
-          set({
-            history: createHistory(project),
-            project,
-            selectedTrackId: project.tracks[0]?.id ?? '',
-            selectedNoteIds: [],
-            clipboardNotes: [],
-            currentFilePath: result.filePath ?? filePath,
-            selectedHomeProjectPath: result.filePath ?? filePath,
-            isDirty: false,
-            viewMode: 'edit'
-          })
-          return true
-        } catch (err) {
-          set({
-            statusMessage: `読み込み失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return false
-        }
-      },
-
-      async createWorkspaceProject(template, options = { openImmediately: true }) {
-        try {
-          const draft = template === 'demo' ? createDemoProject() : createEmptyProject()
-          const encoded = deps.codecs.encodeDefault(draft)
-          const summary = await deps.platform.createWorkspaceProject(draft.title, encoded)
-          await get().refreshWorkspaceProjects()
-          set({ selectedHomeProjectPath: summary.filePath })
-
-          if (options.openImmediately) {
-            await get().openWorkspaceProject(summary.filePath)
-          } else {
-            set({ statusMessage: `「${summary.title}」を作成しました` })
-          }
-          return summary
-        } catch (err) {
-          set({
-            statusMessage: `作成失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return null
-        }
-      },
-
-      async renameWorkspaceProject(filePath, newTitle) {
-        try {
-          const updated = await deps.platform.renameWorkspaceProject(filePath, newTitle)
-          const { currentFilePath, project } = get()
-          if (currentFilePath === filePath) {
-            set({
-              currentFilePath: updated.filePath,
-              project: { ...project, title: updated.title }
-            })
-          }
-          await get().refreshWorkspaceProjects()
-          set({
-            selectedHomeProjectPath: updated.filePath,
-            statusMessage: `「${updated.title}」に名前を変更しました`
-          })
-          return true
-        } catch (err) {
-          set({
-            statusMessage: err instanceof Error ? err.message : String(err)
-          })
-          return false
-        }
-      },
-
-      async duplicateWorkspaceProject(filePath) {
-        try {
-          const copy = await deps.platform.duplicateWorkspaceProject(filePath)
-          await get().refreshWorkspaceProjects()
-          set({
-            selectedHomeProjectPath: copy.filePath,
-            statusMessage: `「${copy.title}」を複製しました`
-          })
-          return copy
-        } catch (err) {
-          set({
-            statusMessage: `複製失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return null
-        }
-      },
-
-      async deleteWorkspaceProject(filePath) {
-        try {
-          await deps.platform.deleteWorkspaceProject(filePath)
-          if (get().currentFilePath === filePath) {
-            set({ currentFilePath: null })
-          }
-          await get().refreshWorkspaceProjects()
-          set({ statusMessage: 'プロジェクトをゴミ箱へ移動しました' })
-          return true
-        } catch (err) {
-          set({
-            statusMessage: `削除失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return false
-        }
-      },
-
-      async prepareLeaveCurrentProject(askDecision) {
-        const strategy = saveStrategies.get(get().settings.saveMode)
-        return strategy.prepareLeave(() => createSaveContext(askDecision))
-      },
-
-      async returnToHome(askDecision) {
-        const canLeave = await get().prepareLeaveCurrentProject(askDecision)
-        if (!canLeave) return false
-        const lastPath = get().currentFilePath
-        set({ viewMode: 'home', selectedNoteIds: [] })
-        await get().refreshWorkspaceProjects()
-        if (lastPath && get().workspaceProjects.some((p) => p.filePath === lastPath)) {
-          set({ selectedHomeProjectPath: lastPath })
-        }
-        return true
-      },
-
-      async saveProjectQuietly() {
-        const { project, currentFilePath } = get()
-        if (!currentFilePath) return false
-        set({ isAutoSaving: true })
-        try {
-          const encoded = deps.codecs.encodeDefault(project)
-          const result = await deps.platform.writeProjectFile(currentFilePath, encoded)
-          if (!result.canceled) {
-            set({ isDirty: false, isAutoSaving: false })
-            return true
-          }
-          set({ isAutoSaving: false })
-          return false
-        } catch (err) {
-          set({
-            isAutoSaving: false,
-            statusMessage: `自動保存失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return false
-        }
-      },
-
-      async saveProject() {
-        saveStrategies.disposeAll()
-        const { project, currentFilePath } = get()
-        if (currentFilePath) {
-          try {
-            const encoded = deps.codecs.encodeDefault(project)
-            const result = await deps.platform.writeProjectFile(currentFilePath, encoded)
-            if (!result.canceled) {
-              set({ isDirty: false, statusMessage: '上書き保存しました' })
-              return true
-            }
-            return false
-          } catch {
-            // Fall back to Save As dialog if target path is no longer writable
-            return get().saveProjectAs()
-          }
-        }
-        return get().saveProjectAs()
-      },
-
-      async saveProjectAs() {
-        saveStrategies.disposeAll()
-        const { project } = get()
-        const safeName = (project.title.trim() || 'untitled').replace(/[\\/:*?"<>|]/g, '_')
-        const encoded = deps.codecs.encodeDefault(project)
-        const result = await deps.platform.saveProjectFile(`${safeName}.json`, encoded)
-        if (!result.canceled && result.filePath) {
-          set({
-            currentFilePath: result.filePath,
-            isDirty: false,
-            statusMessage: 'プロジェクトを保存しました'
-          })
-          return true
-        }
-        return false
-      },
-
-      async openProject() {
-        saveStrategies.disposeAll()
-        const result = await deps.platform.openProjectFile()
-        if (result.canceled || !result.content) return false
-        try {
-          const { project } = deps.codecs.decodeAuto(result.content)
-          set({
-            history: createHistory(project),
-            project,
-            selectedTrackId: project.tracks[0]?.id ?? '',
-            selectedNoteIds: [],
-            clipboardNotes: [],
-            currentFilePath: result.filePath ?? null,
-            isDirty: false,
-            viewMode: 'edit',
-            statusMessage: `「${project.title}」を読み込みました`
-          })
-          return true
-        } catch (err) {
-          set({
-            statusMessage: `読み込み失敗: ${err instanceof Error ? err.message : String(err)}`
-          })
-          return false
-        }
-      },
-
-      newProject() {
-        saveStrategies.disposeAll()
-        const fresh = createEmptyProject()
-        set({
-          history: createHistory(fresh),
-          project: fresh,
-          selectedTrackId: fresh.tracks[0]?.id ?? '',
-          selectedNoteIds: [],
-          clipboardNotes: [],
-          currentFilePath: null,
-          isDirty: false,
-          viewMode: 'edit',
-          statusMessage: '新規プロジェクトを作成しました'
-        })
-      }
+      ...createWorkspaceSlice(set, get, runtime)
     }
   })
 }
