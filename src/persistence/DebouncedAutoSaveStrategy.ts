@@ -6,7 +6,10 @@ import type { SaveContext, SaveStrategy } from './types'
  */
 export class DebouncedAutoSaveStrategy implements SaveStrategy {
   readonly id = 'auto' as const
-  readonly label = '自動保存'
+  readonly label = '自動保存（推奨）'
+  readonly description =
+    '編集後に自動で上書き保存し、ホーム画面へ戻るときも確実に保存します。'
+  readonly flushesSilentlyOnClose = true
 
   private readonly delayMs: number
   private timerId: ReturnType<typeof setTimeout> | null = null

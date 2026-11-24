@@ -9,7 +9,11 @@ import { StageVisualizer } from './components/StageVisualizer'
 import { TrackList } from './components/TrackList'
 import { TransportBar } from './components/TransportBar'
 import { UnsavedChangesModal } from './components/UnsavedChangesModal'
-import { projectStore, useProjectStore } from './store/useProjectStore'
+import {
+  defaultSaveStrategyRegistry,
+  projectStore,
+  useProjectStore
+} from './store/useProjectStore'
 import styles from './App.module.css'
 
 export function App() {
@@ -37,7 +41,8 @@ export function App() {
     const onBeforeUnload = (e: BeforeUnloadEvent): void => {
       const state = projectStore.getState()
       if (state.viewMode === 'home' || !state.isDirty) return
-      if (state.settings.saveMode === 'auto' && state.currentFilePath) {
+      const strategy = defaultSaveStrategyRegistry.get(state.settings.saveMode)
+      if (strategy.flushesSilentlyOnClose && state.currentFilePath) {
         void state.saveProjectQuietly()
         return
       }

@@ -8,7 +8,7 @@ import {
   stopPlayback,
   togglePlayPause
 } from '../actions'
-import { useProjectStore } from '../store/useProjectStore'
+import { defaultSaveStrategyRegistry, useProjectStore } from '../store/useProjectStore'
 import { NumericInput } from './NumericInput'
 import styles from './TransportBar.module.css'
 
@@ -44,8 +44,9 @@ export function TransportBar() {
     }
   }
 
+  const saveStrategy = defaultSaveStrategyRegistry.get(saveMode)
   const saveTooltip =
-    saveMode === 'auto' && currentFilePath
+    saveStrategy.flushesSilentlyOnClose && currentFilePath
       ? '自動保存 ON（Cmd/Ctrl+S で今すぐ保存 / Shift+クリックで別名保存）'
       : '保存 (Cmd/Ctrl+S) / Shift+クリックで別名保存'
 

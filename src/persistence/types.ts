@@ -22,6 +22,8 @@ export interface SaveContext {
 export interface SaveStrategy {
   readonly id: SaveMode
   readonly label: string
+  readonly description: string
+  readonly flushesSilentlyOnClose: boolean
   onProjectChanged(getContext: () => SaveContext): void
   prepareLeave(getContext: () => SaveContext): Promise<boolean>
   dispose(): void

@@ -77,7 +77,7 @@ export function createSettingsSlice(
       if (statePatch.mergedTheme) {
         deps.onThemeChanged?.(statePatch.mergedTheme)
       }
-      if (patch.saveMode === 'auto' && get().isDirty && get().currentFilePath) {
+      if (patch.saveMode !== undefined && get().isDirty && get().currentFilePath) {
         notifyProjectChanged()
       }
     },
