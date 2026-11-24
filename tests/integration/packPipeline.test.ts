@@ -109,7 +109,7 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     expect(document.getElementById('tonebone-pack-override-css')?.textContent).toBe('')
   })
 
-  it('persists workspace settings, creates themes/sounds folders, and migrates legacy activePackIds', () => {
+  it('persists workspace settings, creates themes/sounds folders, and falls back cleanly on missing defaults', () => {
     const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-settings-test-'))
     tempDirs.push(tempRoot)
 
@@ -118,20 +118,13 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     const customWorkspace = join(tempRoot, 'CustomWorkspace')
     mkdirSync(userDataDir, { recursive: true })
 
-    // Simulate legacy settings.json with activePackIds: ['default-minimal', 'minimal-dark']
-    writeFileSync(
-      join(userDataDir, 'settings.json'),
-      JSON.stringify({
-        workspaceDir: defaultWorkspace,
-        activePackIds: ['default-minimal', 'minimal-dark'],
-        noteLengthMode: 'last-used'
-      })
-    )
-
     const repo = new SettingsRepository(userDataDir, defaultWorkspace)
-    const migrated = repo.load()
-    expect(migrated.activeThemePackIds).toEqual(['minimal-light', 'minimal-dark'])
-    expect(migrated.activeSoundPackIds).toEqual(['default-sounds'])
+    const initial = repo.load()
+    expect(initial.workspaceDir).toBe(defaultWorkspace)
+    expect(initial.activeThemePackIds).toEqual(['minimal-light'])
+    expect(initial.activeSoundPackIds).toEqual(['default-sounds'])
+    expect(initial.noteLengthMode).toBe('last-used')
+    expect(initial.saveMode).toBe('auto')
 
     repo.save({
       workspaceDir: customWorkspace,

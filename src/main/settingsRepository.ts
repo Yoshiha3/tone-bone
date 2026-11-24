@@ -34,28 +34,15 @@ export function ensureWorkspaceDirectories(workspaceDir: string): WorkspacePaths
   return paths
 }
 
-interface LegacySettingsShape extends Partial<AppSettings> {
-  /** Legacy unified pack ID list migrated into activeThemePackIds */
-  activePackIds?: unknown
-}
-
-function normalizeThemePackIds(parsed: LegacySettingsShape): string[] {
+function normalizeThemePackIds(parsed: Partial<AppSettings>): string[] {
   if (Array.isArray(parsed.activeThemePackIds)) {
-    const valid = parsed.activeThemePackIds
-      .filter((x): x is string => typeof x === 'string')
-      .map((id) => (id === 'default-minimal' ? DEFAULT_THEME_PACK_ID : id))
+    const valid = parsed.activeThemePackIds.filter((x): x is string => typeof x === 'string')
     if (valid.length > 0) return Array.from(new Set(valid))
-  }
-  if (Array.isArray(parsed.activePackIds)) {
-    const migrated = parsed.activePackIds
-      .filter((x): x is string => typeof x === 'string')
-      .map((id) => (id === 'default-minimal' ? DEFAULT_THEME_PACK_ID : id))
-    if (migrated.length > 0) return Array.from(new Set(migrated))
   }
   return [DEFAULT_THEME_PACK_ID]
 }
 
-function normalizeSoundPackIds(parsed: LegacySettingsShape): string[] {
+function normalizeSoundPackIds(parsed: Partial<AppSettings>): string[] {
   const raw = Array.isArray(parsed.activeSoundPackIds)
     ? parsed.activeSoundPackIds.filter((x): x is string => typeof x === 'string')
     : []
@@ -86,7 +73,7 @@ export class SettingsRepository {
     }
     try {
       const raw = readFileSync(this.settingsFilePath, 'utf-8')
-      const parsed = JSON.parse(raw) as LegacySettingsShape
+      const parsed = JSON.parse(raw) as Partial<AppSettings>
       const settings: AppSettings = {
         workspaceDir:
           typeof parsed.workspaceDir === 'string' && parsed.workspaceDir.trim().length > 0
