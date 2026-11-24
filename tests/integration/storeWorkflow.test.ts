@@ -228,4 +228,43 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(store.getState().viewMode).toBe('home')
     expect(store.getState().workspaceProjects[0].bpm).toBe(152)
   })
+
+  it('updates multiple settings via generic updateSettings including theme merge side effects', async () => {
+    const builtinThemes = loadThemePacksFromDirectory(
+      resolve(__dirname, '../../resources/themes'),
+      'builtin'
+    )
+    const builtinSounds = loadSoundPacksFromDirectory(
+      resolve(__dirname, '../../resources/sounds'),
+      'builtin'
+    )
+    const platform = new MemoryPlatformAdapter(builtinThemes, builtinSounds)
+    const appliedBgs: string[] = []
+
+    const store = createProjectStore({
+      platform,
+      codecs: createDefaultCodecRegistry(),
+      onThemeChanged: (merged) => {
+        appliedBgs.push(merged.tokens['--bg-app'] ?? '')
+      }
+    })
+
+    await store.getState().initialize()
+    expect(appliedBgs).toEqual(['#f6f7f9'])
+
+    await store.getState().updateSettings({
+      noteLengthMode: 'grid-step',
+      saveMode: 'manual',
+      activeThemePackIds: ['minimal-dark']
+    })
+
+    const savedSettings = await platform.loadSettings()
+    expect(store.getState().settings.noteLengthMode).toBe('grid-step')
+    expect(store.getState().settings.saveMode).toBe('manual')
+    expect(store.getState().settings.activeThemePackIds).toEqual(['minimal-dark'])
+    expect(savedSettings.noteLengthMode).toBe('grid-step')
+    expect(savedSettings.saveMode).toBe('manual')
+    expect(savedSettings.activeThemePackIds).toEqual(['minimal-dark'])
+    expect(appliedBgs).toEqual(['#f6f7f9', '#16191f'])
+  })
 })

@@ -36,7 +36,7 @@ flowchart TD
 | `src/visualizers/` | Stage Mode 描画プラグイン（差し替え可能） | `types.ts`, `VisualizerRegistry.ts`, `MinimalFlowRenderer.ts`, `canvasUtils.ts` |
 | `src/platform/` | OS/ファイルI/O の抽象インターフェース（Electron 実装 / テスト用インメモリ実装） | `types.ts`, `ElectronPlatformAdapter.ts`, `MemoryPlatformAdapter.ts` |
 | `src/main/` & `src/preload/` | Electron Main プロセス・IPC ブリッジ・プロジェクト/設定/パック永続化 | `main/index.ts`, `projectRepository.ts`, `settingsRepository.ts`, `packRepository.ts`, `preload/index.ts` |
-| `src/renderer/` | 薄い React UI・アプリ操作窓口・状態ストア | `actions.ts`, `audioContext.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `components/` |
+| `src/renderer/` | 薄い React UI・アプリ操作窓口・スライス分割された状態ストア | `actions.ts`, `audioContext.ts`, `themeTokens.ts`, `store/useProjectStore.ts`, `store/slices/`, `components/` |
 
 ---
 
