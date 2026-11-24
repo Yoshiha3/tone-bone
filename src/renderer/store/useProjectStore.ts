@@ -1,6 +1,6 @@
 import { createStore } from 'zustand/vanilla'
 import { useStore } from 'zustand'
-import { createDefaultCodecRegistry, type CodecRegistry } from '@codecs/CodecRegistry'
+import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { createDemoProject, createEmptyProject } from '@core/demoProject'
 import {
   canRedo,
@@ -8,8 +8,7 @@ import {
   createHistory,
   pushHistory,
   redoHistory,
-  undoHistory,
-  type HistoryStack
+  undoHistory
 } from '@core/history'
 import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
 import {
@@ -20,165 +19,31 @@ import {
   PPQN,
   TICKS_PER_BAR,
   type AppSettings,
-  type GridDivision,
-  type MergedSoundConfig,
-  type MergedThemeConfig,
   type Note,
-  type NoteLengthMode,
-  type Project,
-  type ProjectSummary,
-  type SaveMode,
-  type SoundPack,
-  type ThemePack,
-  type Track,
-  type TrackType,
-  type WorkspaceFolderTarget
+  type Track
 } from '@core/types'
-import { FALLBACK_VISUALIZER_PRESET, mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
-import {
-  createDefaultSaveStrategyRegistry,
-  type SaveStrategyRegistry
-} from '@persistence/SaveStrategyRegistry'
-import type { LeaveDecision, SaveContext } from '@persistence/types'
+import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
+import { createDefaultSaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
+import type { LeaveDecision } from '@persistence/types'
 import { ElectronPlatformAdapter } from '@platform/ElectronPlatformAdapter'
-import type { PlatformAdapter } from '@platform/types'
+import {
+  createId,
+  createSliceRuntime,
+  INITIAL_MERGED_SOUNDS,
+  INITIAL_MERGED_THEME
+} from './helpers'
+import type {
+  ProjectStoreDeps,
+  ProjectStoreState,
+  UnsavedChangesPrompt,
+  ViewMode
+} from './types'
 
-let idCounter = 1
-function createId(prefix: string): string {
-  return `${prefix}-${Date.now().toString(36)}-${idCounter++}`
-}
-
-export type ViewMode = 'home' | 'edit' | 'stage'
-
-export interface UnsavedChangesPrompt {
-  message: string
-  saveLabel: string
-  discardLabel: string
-  resolve: (decision: LeaveDecision) => void
-}
-
-export interface ProjectStoreState {
-  history: HistoryStack<Project>
-  project: Project
-  selectedTrackId: string
-  selectedNoteIds: string[]
-  clipboardNotes: Note[]
-  gridDivision: GridDivision
-  lastNoteDurationTick: number
-  viewMode: ViewMode
-  settingsOpen: boolean
-  isPlaying: boolean
-  isAutoSaving: boolean
-  statusMessage: string | null
-  currentFilePath: string | null
-  isDirty: boolean
-
-  settings: AppSettings
-  availableThemePacks: ThemePack[]
-  mergedTheme: MergedThemeConfig
-  availableSoundPacks: SoundPack[]
-  mergedSounds: MergedSoundConfig
-  workspaceProjects: ProjectSummary[]
-  selectedHomeProjectPath: string | null
-  unsavedPrompt: UnsavedChangesPrompt | null
-
-  // Lifecycle & Platform
-  initialize(): Promise<void>
-  reloadThemePacks(): Promise<void>
-  reloadSoundPacks(): Promise<void>
-  refreshWorkspaceProjects(): Promise<void>
-  setActiveThemePackIds(packIds: string[]): Promise<void>
-  setActiveSoundPackIds(packIds: string[]): Promise<void>
-  setNoteLengthMode(mode: NoteLengthMode): Promise<void>
-  setSaveMode(mode: SaveMode): Promise<void>
-  chooseWorkspaceDir(): Promise<void>
-  openFolder(target: WorkspaceFolderTarget): Promise<void>
-
-  // Home & Workspace project management
-  setSelectedHomeProjectPath(filePath: string | null): void
-  openWorkspaceProject(filePath: string): Promise<boolean>
-  createWorkspaceProject(
-    template: 'empty' | 'demo',
-    options?: { openImmediately?: boolean }
-  ): Promise<ProjectSummary | null>
-  renameWorkspaceProject(filePath: string, newTitle: string): Promise<boolean>
-  duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary | null>
-  deleteWorkspaceProject(filePath: string): Promise<boolean>
-  requestLeaveDecision(prompt: Omit<UnsavedChangesPrompt, 'resolve'>): Promise<LeaveDecision>
-  resolveLeaveDecision(decision: LeaveDecision): void
-  prepareLeaveCurrentProject(askDecision: () => Promise<LeaveDecision>): Promise<boolean>
-  returnToHome(askDecision: () => Promise<LeaveDecision>): Promise<boolean>
-
-  // Direct save / open / new
-  saveProject(): Promise<boolean>
-  saveProjectQuietly(): Promise<boolean>
-  saveProjectAs(): Promise<boolean>
-  openProject(): Promise<boolean>
-  newProject(): void
-
-  // UI state
-  setViewMode(mode: ViewMode): void
-  setSettingsOpen(open: boolean): void
-  setGridDivision(division: GridDivision): void
-  setLastNoteDurationTick(ticks: number): void
-  setIsPlaying(playing: boolean): void
-  setSelectedTrackId(trackId: string): void
-  setSelectedNoteIds(noteIds: string[]): void
-  clearStatusMessage(): void
-
-  // Project mutations (recorded in Undo/Redo)
-  setTitle(title: string): void
-  setBpm(bpm: number): void
-  setBars(bars: number): void
-  toggleLoop(): void
-  addTrack(type: TrackType): void
-  removeTrack(trackId: string): void
-  updateTrack(trackId: string, patch: Partial<Omit<Track, 'id' | 'notes'>>): void
-  toggleMute(trackId: string): void
-  toggleSolo(trackId: string): void
-
-  // Note mutations (recorded in Undo/Redo)
-  addNote(trackId: string, note: Omit<Note, 'id'>): Note
-  updateNote(trackId: string, noteId: string, patch: Partial<Omit<Note, 'id'>>): void
-  deleteSelectedNotes(): void
-  deleteNote(trackId: string, noteId: string): void
-  moveSelectedNotes(deltaTick: number, deltaPitch: number): void
-  copySelectedNotes(): void
-  pasteNotes(targetTick: number): void
-  commitProjectSnapshot(nextProject: Project): void
-
-  // History
-  undo(): void
-  redo(): void
-  canUndo(): boolean
-  canRedo(): boolean
-}
-
-export interface ProjectStoreDeps {
-  platform: PlatformAdapter
-  codecs: CodecRegistry
-  saveStrategies?: SaveStrategyRegistry
-  onThemeChanged?: (merged: MergedThemeConfig) => void
-}
-
-const INITIAL_MERGED_THEME: MergedThemeConfig = {
-  activeThemePackIds: [DEFAULT_THEME_PACK_ID],
-  tokens: {},
-  overrideCss: '',
-  visualizer: FALLBACK_VISUALIZER_PRESET
-}
-
-const INITIAL_MERGED_SOUNDS: MergedSoundConfig = {
-  activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
-  instruments: [
-    {
-      id: 'soft-sine',
-      name: 'Soft Sine',
-      type: 'synth',
-      synth: { waveform: 'sine', attack: 0.012, decay: 0.18, sustain: 0.55, release: 0.22 }
-    },
-    { id: 'basic-kit', name: 'Basic Rhythm Kit', type: 'drum' }
-  ]
+export type {
+  ProjectStoreDeps,
+  ProjectStoreState,
+  UnsavedChangesPrompt,
+  ViewMode
 }
 
 export function createProjectStore(deps: ProjectStoreDeps) {
@@ -186,30 +51,12 @@ export function createProjectStore(deps: ProjectStoreDeps) {
   const saveStrategies = deps.saveStrategies ?? createDefaultSaveStrategyRegistry()
 
   return createStore<ProjectStoreState>((set, get) => {
-    const createSaveContext = (askLeaveDecision: () => Promise<LeaveDecision>): SaveContext => ({
-      get hasFilePath() {
-        return Boolean(get().currentFilePath)
-      },
-      get isDirty() {
-        return get().isDirty
-      },
-      saveQuietly: () => get().saveProjectQuietly(),
-      saveExplicitly: () => get().saveProject(),
-      askLeaveDecision
-    })
-
-    const notifyProjectChanged = (): void => {
-      const strategy = saveStrategies.get(get().settings.saveMode)
-      strategy.onProjectChanged(() => createSaveContext(async () => 'cancel'))
-    }
-
-    const commit = (updater: (prev: Project) => Project): void => {
-      const state = get()
-      const nextProject = updater(state.project)
-      const nextHistory = pushHistory(state.history, nextProject)
-      set({ history: nextHistory, project: nextProject, isDirty: true })
-      notifyProjectChanged()
-    }
+    const { createSaveContext, notifyProjectChanged, commit } = createSliceRuntime(
+      set,
+      get,
+      deps,
+      saveStrategies
+    )
 
     return {
       history: createHistory(initialProject),
