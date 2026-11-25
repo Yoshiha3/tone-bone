@@ -14,9 +14,29 @@ export const DEFAULT_PX_PER_BEAT = 84
 export const MIN_PX_PER_BEAT = 32
 export const MAX_PX_PER_BEAT = 240
 export const ZOOM_BUTTON_STEP = 16
+export const PINCH_ZOOM_SENSITIVITY = 0.008
 
 export function clampPxPerBeat(pxPerBeat: number): number {
   return Math.round(clamp(pxPerBeat, MIN_PX_PER_BEAT, MAX_PX_PER_BEAT) * 100) / 100
+}
+
+export function computePinchZoomPxPerBeat(currentPxPerBeat: number, deltaY: number): number {
+  const factor = Math.exp(-deltaY * PINCH_ZOOM_SENSITIVITY)
+  return clampPxPerBeat(currentPxPerBeat * factor)
+}
+
+export function computeAnchoredScrollLeft(params: {
+  anchorViewX: number
+  currentScrollLeft: number
+  oldPxPerBeat: number
+  newPxPerBeat: number
+}): number {
+  const { anchorViewX, currentScrollLeft, oldPxPerBeat, newPxPerBeat } = params
+  if (oldPxPerBeat <= 0 || newPxPerBeat <= 0) return Math.max(0, currentScrollLeft)
+  const gridViewX = Math.max(0, anchorViewX - KEY_COL_WIDTH)
+  const anchorGridX = currentScrollLeft + gridViewX
+  const nextAnchorGridX = (anchorGridX / oldPxPerBeat) * newPxPerBeat
+  return Math.max(0, nextAnchorGridX - gridViewX)
 }
 
 export interface PianoRollMetrics {

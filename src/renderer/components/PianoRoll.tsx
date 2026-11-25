@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getTrackTypeSpec, TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { audioEngine } from '../audioContext'
 import { projectStore, useProjectStore } from '../store/useProjectStore'
 import { readThemeTokens, type ThemeTokens } from '../themeTokens'
 import {
+  clampPxPerBeat,
+  computeAnchoredScrollLeft,
+  computePinchZoomPxPerBeat,
   createPianoRollMetrics,
   SYNTH_MAX_PITCH,
   SYNTH_ROW_HEIGHT,
@@ -37,6 +40,7 @@ export function PianoRoll() {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const themeRef = useRef<ThemeTokens>(readThemeTokens())
+  const pendingScrollLeftRef = useRef<number | null>(null)
 
   const track = project.tracks.find((t) => t.id === selectedTrackId) ?? project.tracks[0]
   const trackSpec = track ? getTrackTypeSpec(track.type) : TRACK_TYPE_SPECS.synth
@@ -57,6 +61,15 @@ export function PianoRoll() {
     noteLengthMode,
     lastNoteDurationTick
   })
+
+  // Apply anchored horizontal scroll immediately after zoom layout updates
+  useLayoutEffect(() => {
+    const el = scrollRef.current
+    if (!el || pendingScrollLeftRef.current === null) return
+    el.scrollLeft = pendingScrollLeftRef.current
+    pendingScrollLeftRef.current = null
+    projectStore.getState().setPianoRollScroll({ left: el.scrollLeft, top: el.scrollTop })
+  }, [pxPerBeat])
 
   // Observe visible viewport size so Canvas never grows with bar count
   useEffect(() => {
@@ -86,6 +99,29 @@ export function PianoRoll() {
       projectStore.getState().setPianoRollScroll({ left: el.scrollLeft, top: el.scrollTop })
     }
   }, [])
+
+  // Trackpad pinch-in / pinch-out horizontal zoom anchored at pointer X
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent): void => {
+      if (!e.ctrlKey) return
+      e.preventDefault()
+      const oldPxPerBeat = projectStore.getState().pxPerBeat
+      const newPxPerBeat = computePinchZoomPxPerBeat(oldPxPerBeat, e.deltaY)
+      if (newPxPerBeat === oldPxPerBeat) return
+      const rect = el.getBoundingClientRect()
+      pendingScrollLeftRef.current = computeAnchoredScrollLeft({
+        anchorViewX: e.clientX - rect.left,
+        currentScrollLeft: el.scrollLeft,
+        oldPxPerBeat,
+        newPxPerBeat
+      })
+      setPxPerBeat(newPxPerBeat)
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [setPxPerBeat])
 
   // Refresh cached CSS theme tokens only when active theme packs change
   useEffect(() => {
@@ -170,6 +206,21 @@ export function PianoRoll() {
     interaction.sessionRef
   ])
 
+  const zoomByStep = (delta: number): void => {
+    const newPxPerBeat = clampPxPerBeat(pxPerBeat + delta)
+    if (newPxPerBeat === pxPerBeat) return
+    const el = scrollRef.current
+    if (el) {
+      pendingScrollLeftRef.current = computeAnchoredScrollLeft({
+        anchorViewX: el.clientWidth / 2,
+        currentScrollLeft: el.scrollLeft,
+        oldPxPerBeat: pxPerBeat,
+        newPxPerBeat
+      })
+    }
+    setPxPerBeat(newPxPerBeat)
+  }
+
   return (
     <section className={styles.wrapper} data-testid="piano-roll">
       <div className={styles.scrollArea} ref={scrollRef}>
@@ -233,8 +284,8 @@ export function PianoRoll() {
           <button
             type="button"
             className={styles.toolBtn}
-            onClick={() => setPxPerBeat(pxPerBeat - ZOOM_BUTTON_STEP)}
-            title="縮小"
+            onClick={() => zoomByStep(-ZOOM_BUTTON_STEP)}
+            title="縮小（ピンチイン）"
             data-testid="zoom-out-btn"
           >
             -
@@ -242,8 +293,8 @@ export function PianoRoll() {
           <button
             type="button"
             className={styles.toolBtn}
-            onClick={() => setPxPerBeat(pxPerBeat + ZOOM_BUTTON_STEP)}
-            title="拡大"
+            onClick={() => zoomByStep(ZOOM_BUTTON_STEP)}
+            title="拡大（ピンチアウト）"
             data-testid="zoom-in-btn"
           >
             +

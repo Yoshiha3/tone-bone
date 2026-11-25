@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { TRACK_TYPE_SPECS } from '@core/trackTypes'
 import type { Note } from '@core/types'
 import {
+  clampPxPerBeat,
+  computeAnchoredScrollLeft,
+  computePinchZoomPxPerBeat,
   computeVisibleBounds,
   contentXToTick,
   contentYToPitch,
   createPianoRollMetrics,
   hitTestNote,
   KEY_COL_WIDTH,
+  MAX_PX_PER_BEAT,
+  MIN_PX_PER_BEAT,
   pitchToContentY,
   SYNTH_MAX_PITCH,
   SYNTH_MIN_PITCH
@@ -58,5 +63,29 @@ describe('pianoRollGeometry', () => {
     const metrics = createPianoRollMetrics(false, 4, 84)
     expect(metrics.minPitch).toBe(24)
     expect(metrics.maxPitch).toBe(96)
+  })
+
+  it('computes pinch zoom within bounds and keeps pointer tick anchored on scroll', () => {
+    expect(clampPxPerBeat(10)).toBe(MIN_PX_PER_BEAT)
+    expect(clampPxPerBeat(999)).toBe(MAX_PX_PER_BEAT)
+
+    const zoomedIn = computePinchZoomPxPerBeat(84, -30)
+    const zoomedOut = computePinchZoomPxPerBeat(84, 30)
+    expect(zoomedIn).toBeGreaterThan(84)
+    expect(zoomedOut).toBeLessThan(84)
+
+    const anchorViewX = KEY_COL_WIDTH + 200
+    const oldScrollLeft = 120
+    const oldMetrics = createPianoRollMetrics(false, 8, 84)
+    const newMetrics = createPianoRollMetrics(false, 8, 168)
+    const tickBefore = contentXToTick(anchorViewX + oldScrollLeft, oldMetrics)
+    const newScrollLeft = computeAnchoredScrollLeft({
+      anchorViewX,
+      currentScrollLeft: oldScrollLeft,
+      oldPxPerBeat: 84,
+      newPxPerBeat: 168
+    })
+    const tickAfter = contentXToTick(anchorViewX + newScrollLeft, newMetrics)
+    expect(tickAfter).toBeCloseTo(tickBefore, 4)
   })
 })
