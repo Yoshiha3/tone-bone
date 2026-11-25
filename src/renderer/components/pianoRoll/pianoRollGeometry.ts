@@ -16,6 +16,9 @@ export const MAX_PX_PER_BEAT = 240
 export const ZOOM_BUTTON_STEP = 16
 export const PINCH_ZOOM_SENSITIVITY = 0.008
 
+export const AUTO_SCROLL_EDGE_PX = 36
+export const AUTO_SCROLL_MAX_SPEED_PX = 18
+
 export function clampPxPerBeat(pxPerBeat: number): number {
   return Math.round(clamp(pxPerBeat, MIN_PX_PER_BEAT, MAX_PX_PER_BEAT) * 100) / 100
 }
@@ -37,6 +40,38 @@ export function computeAnchoredScrollLeft(params: {
   const anchorGridX = currentScrollLeft + gridViewX
   const nextAnchorGridX = (anchorGridX / oldPxPerBeat) * newPxPerBeat
   return Math.max(0, nextAnchorGridX - gridViewX)
+}
+
+export function computeEdgeAutoScrollDelta(
+  viewX: number,
+  viewY: number,
+  viewW: number,
+  viewH: number
+): { dx: number; dy: number } {
+  let dx = 0
+  let dy = 0
+
+  const leftEdge = KEY_COL_WIDTH + AUTO_SCROLL_EDGE_PX
+  const rightEdge = viewW - AUTO_SCROLL_EDGE_PX
+  if (viewX < leftEdge) {
+    const ratio = clamp((leftEdge - viewX) / AUTO_SCROLL_EDGE_PX, 0, 1.5)
+    dx = -Math.ceil(Math.min(1, ratio) * AUTO_SCROLL_MAX_SPEED_PX)
+  } else if (viewX > rightEdge) {
+    const ratio = clamp((viewX - rightEdge) / AUTO_SCROLL_EDGE_PX, 0, 1.5)
+    dx = Math.ceil(Math.min(1, ratio) * AUTO_SCROLL_MAX_SPEED_PX)
+  }
+
+  const topEdge = RULER_HEIGHT + AUTO_SCROLL_EDGE_PX
+  const bottomEdge = viewH - AUTO_SCROLL_EDGE_PX
+  if (viewY < topEdge) {
+    const ratio = clamp((topEdge - viewY) / AUTO_SCROLL_EDGE_PX, 0, 1.5)
+    dy = -Math.ceil(Math.min(1, ratio) * AUTO_SCROLL_MAX_SPEED_PX)
+  } else if (viewY > bottomEdge) {
+    const ratio = clamp((viewY - bottomEdge) / AUTO_SCROLL_EDGE_PX, 0, 1.5)
+    dy = Math.ceil(Math.min(1, ratio) * AUTO_SCROLL_MAX_SPEED_PX)
+  }
+
+  return { dx, dy }
 }
 
 export interface PianoRollMetrics {

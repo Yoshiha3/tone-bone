@@ -4,6 +4,7 @@ import type { Note } from '@core/types'
 import {
   clampPxPerBeat,
   computeAnchoredScrollLeft,
+  computeEdgeAutoScrollDelta,
   computePinchZoomPxPerBeat,
   computeVisibleBounds,
   contentXToTick,
@@ -14,6 +15,7 @@ import {
   MAX_PX_PER_BEAT,
   MIN_PX_PER_BEAT,
   pitchToContentY,
+  RULER_HEIGHT,
   SYNTH_MAX_PITCH,
   SYNTH_MIN_PITCH
 } from '@renderer/components/pianoRoll/pianoRollGeometry'
@@ -87,5 +89,17 @@ describe('pianoRollGeometry', () => {
     })
     const tickAfter = contentXToTick(anchorViewX + newScrollLeft, newMetrics)
     expect(tickAfter).toBeCloseTo(tickBefore, 4)
+  })
+
+  it('computes edge auto-scroll deltas near or outside grid viewport edges', () => {
+    expect(computeEdgeAutoScrollDelta(400, 300, 960, 600)).toEqual({ dx: 0, dy: 0 })
+
+    const topLeft = computeEdgeAutoScrollDelta(KEY_COL_WIDTH - 10, RULER_HEIGHT - 10, 960, 600)
+    expect(topLeft.dx).toBeLessThan(0)
+    expect(topLeft.dy).toBeLessThan(0)
+
+    const bottomRight = computeEdgeAutoScrollDelta(955, 595, 960, 600)
+    expect(bottomRight.dx).toBeGreaterThan(0)
+    expect(bottomRight.dy).toBeGreaterThan(0)
   })
 })

@@ -53,6 +53,7 @@ export function PianoRoll() {
 
   const interaction = usePianoRollInteraction({
     scrollRef,
+    canvasRef,
     track,
     metrics,
     gridDivision,
@@ -233,9 +234,6 @@ export function PianoRoll() {
             style={{ width: viewport.width, height: viewport.height }}
             className={`${styles.canvas} ${toolMode === 'select' ? styles.canvasSelect : ''}`}
             onMouseDown={interaction.onMouseDown}
-            onMouseMove={interaction.onMouseMove}
-            onMouseUp={interaction.onMouseUp}
-            onMouseLeave={interaction.onMouseLeave}
             onContextMenu={(e) => e.preventDefault()}
             data-testid="piano-roll-canvas"
           />

@@ -255,9 +255,11 @@ export function handlePianoRollPointerMove(
   }
 
   if (drag.kind === 'marquee') {
-    drag.curX = contentX
-    drag.curY = contentY
-    session.marquee = { x1: drag.startX, y1: drag.startY, x2: contentX, y2: contentY }
+    const clampedX = Math.max(KEY_COL_WIDTH, Math.min(metrics.contentWidth, contentX))
+    const clampedY = Math.max(RULER_HEIGHT, Math.min(metrics.contentHeight, contentY))
+    drag.curX = clampedX
+    drag.curY = clampedY
+    session.marquee = { x1: drag.startX, y1: drag.startY, x2: clampedX, y2: clampedY }
   }
 }
 
