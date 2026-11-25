@@ -24,7 +24,8 @@ function createHarness() {
   const actions = {
     togglePlayPause: vi.fn(),
     requestNewProject: vi.fn(async () => true),
-    getCurrentTick: vi.fn(() => 960.4)
+    getCurrentTick: vi.fn(() => 960.4),
+    previewNote: vi.fn()
   }
   return { store, actions }
 }
@@ -195,5 +196,66 @@ describe('dispatchKeyboardShortcut', () => {
     })
     expect(actions.togglePlayPause).toHaveBeenCalledTimes(2)
     expect(undoSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('handles select-all (Cmd+A) and semitone/octave transpose shortcuts with preview sound', () => {
+    const { store, actions } = createHarness()
+    store.setState({ viewMode: 'edit' })
+
+    const synthTrack = store.getState().project.tracks.find((t) => t.type === 'synth')!
+    const firstNoteOrigPitch = synthTrack.notes[0].pitch
+
+    // ArrowUp without selection is ignored
+    expect(
+      dispatchKeyboardShortcut(keyEvent({ key: 'ArrowUp' }), {
+        state: store.getState(),
+        actions
+      }).matched
+    ).toBe(false)
+
+    // Cmd+A selects all notes in active track
+    const selectAllRes = dispatchKeyboardShortcut(keyEvent({ key: 'a', metaKey: true }), {
+      state: store.getState(),
+      actions
+    })
+    expect(selectAllRes.id).toBe('select-all-notes')
+    expect(store.getState().selectedNoteIds).toHaveLength(synthTrack.notes.length)
+
+    // ArrowUp shifts selected notes +1 semitone and previews anchor note
+    const upRes = dispatchKeyboardShortcut(keyEvent({ key: 'ArrowUp' }), {
+      state: store.getState(),
+      actions
+    })
+    expect(upRes.id).toBe('transpose-up-semitone')
+    expect(store.getState().project.tracks[0].notes[0].pitch).toBe(firstNoteOrigPitch + 1)
+    expect(actions.previewNote).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: synthTrack.id }),
+      firstNoteOrigPitch + 1,
+      0.14
+    )
+
+    // Shift+ArrowDown shifts selected notes -12 semitones
+    const octDownRes = dispatchKeyboardShortcut(
+      keyEvent({ key: 'ArrowDown', shiftKey: true }),
+      { state: store.getState(), actions }
+    )
+    expect(octDownRes.id).toBe('transpose-down-octave')
+    expect(store.getState().project.tracks[0].notes[0].pitch).toBe(firstNoteOrigPitch - 11)
+    expect(actions.previewNote).toHaveBeenLastCalledWith(
+      expect.objectContaining({ id: synthTrack.id }),
+      firstNoteOrigPitch - 11,
+      0.14
+    )
+
+    // Shift+ArrowUp is disabled on drum tracks (drums have no octaves)
+    const drumTrack = store.getState().project.tracks.find((t) => t.type === 'drum')!
+    store.getState().setSelectedTrackId(drumTrack.id)
+    store.getState().selectAllNotes()
+    expect(
+      dispatchKeyboardShortcut(keyEvent({ key: 'ArrowUp', shiftKey: true }), {
+        state: store.getState(),
+        actions
+      }).matched
+    ).toBe(false)
   })
 })

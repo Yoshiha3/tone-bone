@@ -51,6 +51,7 @@ export interface UiSlice {
   setIsPlaying(playing: boolean): void
   setSelectedTrackId(trackId: string): void
   setSelectedNoteIds(noteIds: string[]): void
+  selectAllNotes(): void
   clearStatusMessage(): void
 }
 
@@ -87,7 +88,7 @@ export interface ProjectSlice {
   updateNote(trackId: string, noteId: string, patch: Partial<Omit<Note, 'id'>>): void
   deleteSelectedNotes(): void
   deleteNote(trackId: string, noteId: string): void
-  moveSelectedNotes(deltaTick: number, deltaPitch: number): void
+  moveSelectedNotes(deltaTick: number, deltaPitch: number): Note | null
   copySelectedNotes(): void
   pasteNotes(targetTick: number): void
   commitProjectSnapshot(nextProject: Project): void

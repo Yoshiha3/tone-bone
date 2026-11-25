@@ -47,6 +47,12 @@ export function createUiSlice(
     setIsPlaying: (isPlaying) => set({ isPlaying }),
     setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId, selectedNoteIds: [] }),
     setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
+    selectAllNotes: () => {
+      const { project, selectedTrackId } = get()
+      const track = project.tracks.find((t) => t.id === selectedTrackId)
+      if (!track) return
+      set({ selectedNoteIds: track.notes.map((n) => n.id) })
+    },
     clearStatusMessage: () => set({ statusMessage: null })
   }
 }

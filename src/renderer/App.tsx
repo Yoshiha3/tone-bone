@@ -76,7 +76,9 @@ export function App() {
           actions: {
             togglePlayPause,
             requestNewProject,
-            getCurrentTick: () => audioEngine.getCurrentTick()
+            getCurrentTick: () => audioEngine.getCurrentTick(),
+            previewNote: (track, pitch, durationSeconds) =>
+              audioEngine.previewNote(track, pitch, durationSeconds)
           }
         }
       )

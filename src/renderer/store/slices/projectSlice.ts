@@ -164,34 +164,37 @@ export function createProjectSlice(
 
     moveSelectedNotes: (deltaTick, deltaPitch) => {
       const { project, selectedTrackId, selectedNoteIds } = get()
-      if (selectedNoteIds.length === 0 || (deltaTick === 0 && deltaPitch === 0)) return
+      if (selectedNoteIds.length === 0 || (deltaTick === 0 && deltaPitch === 0)) return null
       const track = project.tracks.find((t) => t.id === selectedTrackId)
-      if (!track) return
+      if (!track) return null
       const spec = getTrackTypeSpec(track.type)
       const minPitch = spec.minPitch
       const maxPitch = spec.maxPitch
       const maxTicks = project.bars * TICKS_PER_BAR
       const idSet = new Set(selectedNoteIds)
 
+      const nextNotes = moveNotes(
+        track.notes,
+        idSet,
+        deltaTick,
+        deltaPitch,
+        minPitch,
+        maxPitch,
+        maxTicks
+      )
+      const changed = nextNotes.some(
+        (n, idx) =>
+          n.startTick !== track.notes[idx]?.startTick || n.pitch !== track.notes[idx]?.pitch
+      )
+      if (!changed) return null
+
       commit((p) => ({
         ...p,
-        tracks: p.tracks.map((t) =>
-          t.id === selectedTrackId
-            ? {
-                ...t,
-                notes: moveNotes(
-                  t.notes,
-                  idSet,
-                  deltaTick,
-                  deltaPitch,
-                  minPitch,
-                  maxPitch,
-                  maxTicks
-                )
-              }
-            : t
-        )
+        tracks: p.tracks.map((t) => (t.id === selectedTrackId ? { ...t, notes: nextNotes } : t))
       }))
+
+      const anchorId = selectedNoteIds[0]
+      return nextNotes.find((n) => n.id === anchorId) ?? nextNotes.find((n) => idSet.has(n.id)) ?? null
     },
 
     copySelectedNotes: () => {

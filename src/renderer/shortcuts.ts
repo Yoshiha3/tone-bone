@@ -1,3 +1,5 @@
+import { getTrackTypeSpec } from '@core/trackTypes'
+import type { Track } from '@core/types'
 import type { ProjectStoreState, ViewMode } from './store/types'
 
 export interface ShortcutKeyEvent {
@@ -13,6 +15,7 @@ export interface ShortcutActions {
   togglePlayPause: () => void
   requestNewProject: () => Promise<boolean>
   getCurrentTick: () => number
+  previewNote?: (track: Track, pitch: number, durationSeconds?: number) => void
 }
 
 export interface ShortcutContext {
@@ -32,6 +35,21 @@ export interface ShortcutBinding {
   readonly preventDefault?: boolean
   readonly when?: (ctx: ShortcutContext) => boolean
   readonly run: (ctx: ShortcutContext) => unknown
+}
+
+function transposeSelectedNotes(ctx: ShortcutContext, deltaPitch: number): void {
+  const { state, actions } = ctx
+  const track = state.project.tracks.find((t) => t.id === state.selectedTrackId)
+  if (!track) return
+  const movedAnchor = state.moveSelectedNotes(0, deltaPitch)
+  if (movedAnchor) {
+    actions.previewNote?.(track, movedAnchor.pitch, 0.14)
+  }
+}
+
+function isSelectedTrackMelodic(state: ProjectStoreState): boolean {
+  const track = state.project.tracks.find((t) => t.id === state.selectedTrackId)
+  return Boolean(track && !getTrackTypeSpec(track.type).usesDrumLanes)
 }
 
 /**
@@ -130,6 +148,54 @@ export const SHORTCUT_BINDINGS: readonly ShortcutBinding[] = [
     mod: true,
     shift: false,
     run: ({ state }) => state.saveProject()
+  },
+  {
+    id: 'select-all-notes',
+    description: '現在のトラックの全ノーツを選択',
+    views: ['edit'],
+    keys: ['a'],
+    mod: true,
+    run: ({ state }) => state.selectAllNotes()
+  },
+  {
+    id: 'transpose-up-octave',
+    description: '選択中のノーツを1オクターブ上げる',
+    views: ['edit'],
+    keys: ['arrowup'],
+    mod: false,
+    shift: true,
+    when: ({ state }) => state.selectedNoteIds.length > 0 && isSelectedTrackMelodic(state),
+    run: (ctx) => transposeSelectedNotes(ctx, 12)
+  },
+  {
+    id: 'transpose-down-octave',
+    description: '選択中のノーツを1オクターブ下げる',
+    views: ['edit'],
+    keys: ['arrowdown'],
+    mod: false,
+    shift: true,
+    when: ({ state }) => state.selectedNoteIds.length > 0 && isSelectedTrackMelodic(state),
+    run: (ctx) => transposeSelectedNotes(ctx, -12)
+  },
+  {
+    id: 'transpose-up-semitone',
+    description: '選択中のノーツを半音上げる',
+    views: ['edit'],
+    keys: ['arrowup'],
+    mod: false,
+    shift: false,
+    when: ({ state }) => state.selectedNoteIds.length > 0,
+    run: (ctx) => transposeSelectedNotes(ctx, 1)
+  },
+  {
+    id: 'transpose-down-semitone',
+    description: '選択中のノーツを半音下げる',
+    views: ['edit'],
+    keys: ['arrowdown'],
+    mod: false,
+    shift: false,
+    when: ({ state }) => state.selectedNoteIds.length > 0,
+    run: (ctx) => transposeSelectedNotes(ctx, -1)
   },
   {
     id: 'delete-selected-notes',

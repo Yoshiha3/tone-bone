@@ -86,13 +86,38 @@ export function moveNotes(
   maxPitch: number,
   maxTotalTicks: number
 ): Note[] {
+  let minAllowedTick = -Infinity
+  let maxAllowedTick = Infinity
+  let minAllowedPitch = -Infinity
+  let maxAllowedPitch = Infinity
+  let hasSelected = false
+
+  for (const note of notes) {
+    if (!selectedIds.has(note.id)) continue
+    hasSelected = true
+    minAllowedTick = Math.max(minAllowedTick, -note.startTick)
+    maxAllowedTick = Math.min(maxAllowedTick, maxTotalTicks - note.durationTick - note.startTick)
+    minAllowedPitch = Math.max(minAllowedPitch, minPitch - note.pitch)
+    maxAllowedPitch = Math.min(maxAllowedPitch, maxPitch - note.pitch)
+  }
+
+  if (!hasSelected) return [...notes]
+
+  const effectiveDeltaTick = clamp(
+    deltaTick,
+    minAllowedTick,
+    Math.max(minAllowedTick, maxAllowedTick)
+  )
+  const effectiveDeltaPitch = clamp(
+    deltaPitch,
+    minAllowedPitch,
+    Math.max(minAllowedPitch, maxAllowedPitch)
+  )
+
   return notes.map((note) => {
     if (!selectedIds.has(note.id)) return note
-    const nextStart = Math.max(
-      0,
-      Math.min(maxTotalTicks - note.durationTick, note.startTick + deltaTick)
-    )
-    const nextPitch = Math.max(minPitch, Math.min(maxPitch, note.pitch + deltaPitch))
+    const nextStart = clamp(note.startTick + effectiveDeltaTick, 0, maxTotalTicks - note.durationTick)
+    const nextPitch = clamp(note.pitch + effectiveDeltaPitch, minPitch, maxPitch)
     return {
       ...note,
       startTick: nextStart,

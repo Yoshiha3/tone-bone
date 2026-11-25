@@ -62,7 +62,7 @@ describe('musicMath', () => {
     expect(selected).toEqual(['n1', 'n2'])
   })
 
-  it('moves selected notes together and clamps within bounds', () => {
+  it('moves selected notes together and preserves relative intervals and timing at boundaries', () => {
     const notes: Note[] = [
       { id: 'n1', pitch: 60, startTick: 240, durationTick: 240, velocity: 0.8 },
       { id: 'n2', pitch: 64, startTick: 480, durationTick: 240, velocity: 0.8 }
@@ -71,6 +71,16 @@ describe('musicMath', () => {
     expect(moved[0].startTick).toBe(400)
     expect(moved[0].pitch).toBe(62)
     expect(moved[1]).toEqual(notes[1])
+
+    // Moving a chord past maxPitch clamps the entire group so the 4-semitone interval stays intact
+    const clampedUp = moveNotes(notes, new Set(['n1', 'n2']), 0, 50, 24, 96, TICKS_PER_BAR * 4)
+    expect(clampedUp[0].pitch).toBe(92)
+    expect(clampedUp[1].pitch).toBe(96)
+
+    // Moving a group left past tick 0 preserves the 240-tick offset between notes
+    const clampedLeft = moveNotes(notes, new Set(['n1', 'n2']), -999, 0, 24, 96, TICKS_PER_BAR * 4)
+    expect(clampedLeft[0].startTick).toBe(0)
+    expect(clampedLeft[1].startTick).toBe(240)
   })
 
   it('clones copied notes preserving relative timing offsets', () => {
