@@ -11,12 +11,12 @@ import {
 import { basename, dirname, extname, join } from 'path'
 import { createDefaultCodecRegistry, type CodecRegistry } from '@codecs/CodecRegistry'
 import type { Project, ProjectSummary } from '@core/types'
+import { sanitizeFileNameSegment } from './pathSecurity'
 
 const defaultCodecRegistry = createDefaultCodecRegistry()
 
 export function sanitizeProjectFileName(rawTitle: string): string {
-  const cleaned = rawTitle.trim().replace(/[\\/:*?"<>|]/g, '_')
-  return cleaned.length > 0 ? cleaned : 'Untitled'
+  return sanitizeFileNameSegment(rawTitle, 'Untitled')
 }
 
 function tryDecodeProject(
