@@ -1,6 +1,12 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import { join } from 'path'
 import { registerAllIpcHandlers } from './ipc'
+import {
+  applySessionSecurity,
+  applyWindowSecurity,
+  assertTrustedIpcEvent,
+  createGuardedIpcMain
+} from './security'
 import { SettingsRepository } from './settingsRepository'
 
 function getBuiltinResourcesSubdir(subdir: 'themes' | 'sounds'): string {
@@ -9,6 +15,9 @@ function getBuiltinResourcesSubdir(subdir: 'themes' | 'sounds'): string {
   }
   return join(app.getAppPath(), 'resources', subdir)
 }
+
+const rendererHtmlPath = join(__dirname, '../renderer/index.html')
+const devServerUrl = process.env.ELECTRON_RENDERER_URL
 
 let mainWindow: BrowserWindow | null = null
 
@@ -24,14 +33,16 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   })
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+  applyWindowSecurity(mainWindow, { rendererHtmlPath, devServerUrl })
+
+  if (devServerUrl) {
+    void mainWindow.loadURL(devServerUrl)
   } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(rendererHtmlPath)
   }
 
   mainWindow.on('closed', () => {
@@ -40,12 +51,18 @@ function createWindow(): void {
 }
 
 void app.whenReady().then(() => {
+  applySessionSecurity(session.defaultSession)
+
   const defaultWorkspace = join(app.getPath('documents'), 'ToneBone')
   const settingsRepo = new SettingsRepository(app.getPath('userData'), defaultWorkspace)
   settingsRepo.load()
 
+  const guardedIpcMain = createGuardedIpcMain(ipcMain, (event) =>
+    assertTrustedIpcEvent(event, rendererHtmlPath, devServerUrl)
+  )
+
   registerAllIpcHandlers({
-    ipcMain,
+    ipcMain: guardedIpcMain,
     dialog,
     shell,
     settingsRepo,
