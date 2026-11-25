@@ -26,7 +26,7 @@ export type TrackType = 'synth' | 'drum'
 
 export interface Note {
   id: string
-  /** MIDI note number (0-127) for synth, or DrumLane pitch (0-7) for drum */
+  /** MIDI note number (0-127) for synth, or DrumLane pitch (0 .. DRUM_LANES.length - 1) for drum */
   pitch: number
   startTick: number
   durationTick: number
@@ -63,7 +63,7 @@ export interface DrumLane {
   shortLabel: string
 }
 
-export const DRUM_LANES: readonly DrumLane[] = [
+export const DRUM_LANES = [
   { pitch: 0, id: 'kick', label: 'Kick', shortLabel: 'BD' },
   { pitch: 1, id: 'snare', label: 'Snare', shortLabel: 'SD' },
   { pitch: 2, id: 'hihat-closed', label: 'Closed HH', shortLabel: 'CH' },
@@ -72,7 +72,9 @@ export const DRUM_LANES: readonly DrumLane[] = [
   { pitch: 5, id: 'rim', label: 'Rim', shortLabel: 'RM' },
   { pitch: 6, id: 'tom-low', label: 'Low Tom', shortLabel: 'LT' },
   { pitch: 7, id: 'tom-high', label: 'High Tom', shortLabel: 'HT' }
-] as const
+] as const satisfies readonly DrumLane[]
+
+export type DrumLaneId = (typeof DRUM_LANES)[number]['id']
 
 export type SynthWaveform = 'sine' | 'square' | 'sawtooth' | 'triangle'
 

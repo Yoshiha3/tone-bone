@@ -1,4 +1,16 @@
+import { DRUM_LANES, type DrumLaneId } from '@core/types'
 import type { AudioVoice, VoiceTriggerParams } from '../types'
+
+type DrumLaneHandler = (
+  context: BaseAudioContext,
+  destination: AudioNode,
+  time: number,
+  gainLevel: number
+) => void
+
+const DRUM_LANE_BY_PITCH = new Map<number, DrumLaneId>(
+  DRUM_LANES.map((lane) => [lane.pitch, lane.id])
+)
 
 function createNoiseBuffer(context: BaseAudioContext, durationSeconds: number): AudioBuffer {
   const length = Math.max(1, Math.floor(context.sampleRate * durationSeconds))
@@ -23,38 +35,25 @@ export class DrumVoice implements AudioVoice {
     return cached
   }
 
+  private readonly laneHandlers: Record<DrumLaneId, DrumLaneHandler> = {
+    kick: (ctx, dest, time, gain) => this.triggerKick(ctx, dest, time, gain),
+    snare: (ctx, dest, time, gain) => this.triggerSnare(ctx, dest, time, gain),
+    'hihat-closed': (ctx, dest, time, gain) => this.triggerHiHat(ctx, dest, time, gain * 0.65, 0.06),
+    'hihat-open': (ctx, dest, time, gain) => this.triggerHiHat(ctx, dest, time, gain * 0.65, 0.28),
+    clap: (ctx, dest, time, gain) => this.triggerClap(ctx, dest, time, gain * 0.75),
+    rim: (ctx, dest, time, gain) => this.triggerRim(ctx, dest, time, gain * 0.7),
+    'tom-low': (ctx, dest, time, gain) => this.triggerTom(ctx, dest, time, gain * 0.85, 115, 58),
+    'tom-high': (ctx, dest, time, gain) => this.triggerTom(ctx, dest, time, gain * 0.85, 185, 95)
+  }
+
   trigger(params: VoiceTriggerParams): void {
     const { context, destination, pitch, startTime, velocity } = params
     const gain = Math.max(0.05, Math.min(1, velocity)) * 0.6
-
-    switch (pitch) {
-      case 0:
-        this.triggerKick(context, destination, startTime, gain)
-        break
-      case 1:
-        this.triggerSnare(context, destination, startTime, gain)
-        break
-      case 2:
-        this.triggerHiHat(context, destination, startTime, gain * 0.65, 0.06)
-        break
-      case 3:
-        this.triggerHiHat(context, destination, startTime, gain * 0.65, 0.28)
-        break
-      case 4:
-        this.triggerClap(context, destination, startTime, gain * 0.75)
-        break
-      case 5:
-        this.triggerRim(context, destination, startTime, gain * 0.7)
-        break
-      case 6:
-        this.triggerTom(context, destination, startTime, gain * 0.85, 115, 58)
-        break
-      case 7:
-        this.triggerTom(context, destination, startTime, gain * 0.85, 185, 95)
-        break
-      default:
-        this.triggerKick(context, destination, startTime, gain * 0.6)
-        break
+    const laneId = DRUM_LANE_BY_PITCH.get(pitch)
+    if (laneId) {
+      this.laneHandlers[laneId](context, destination, startTime, gain)
+    } else {
+      this.triggerKick(context, destination, startTime, gain * 0.6)
     }
   }
 
