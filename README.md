@@ -57,6 +57,31 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
 
 ---
 
+## ダウンロード & インストール
+
+[GitHub Releases](https://github.com/Yoshiha3/tone-bone/releases) からお使いの OS 向けバイナリをダウンロードできます。
+
+| OS | ファイル |
+| :--- | :--- |
+| macOS (Apple Silicon) | `Tone-Bone-<version>-mac-arm64.dmg` |
+| macOS (Intel) | `Tone-Bone-<version>-mac-x64.dmg` |
+| Windows (インストーラー / ポータブル) | `Tone-Bone-<version>-win-x64-setup.exe` / `Tone-Bone-<version>-win-x64-portable.exe` |
+| Linux (AppImage) | `Tone-Bone-<version>-linux-x64.AppImage` |
+
+### 初回起動時の注意（未署名バイナリ）
+- **macOS**: Gatekeeper により「開発元が未確認」または「壊れているため開けません」と表示される場合は、`/Applications` にドラッグ＆ドロップした後、ターミナルで以下を実行してから起動してください。
+  ```bash
+  xattr -cr "/Applications/Tone Bone.app"
+  ```
+- **Windows**: SmartScreen の警告画面が表示された場合は「詳細情報」→「実行」を選択してください。
+- **Linux**: 実行権限を付与して起動してください。
+  ```bash
+  chmod +x Tone-Bone-*.AppImage
+  ./Tone-Bone-*.AppImage
+  ```
+
+---
+
 ## 開発・テスト・アプリ化
 
 ### 必要環境
@@ -89,9 +114,26 @@ npm run test:e2e
 ### ネイティブアプリのパッケージング
 
 ```bash
-# macOS (.app / .dmg), Windows (.exe), Linux (.AppImage) を dist/ へ出力
+# 現在の OS 向けに dist/ へ出力
 npm run package
+
+# OS 指定ビルド
+npm run package:mac
+npm run package:win
+npm run package:linux
+
+# build/icon.svg から各 OS 用アイコン (.png / .icns / .ico) を再生成
+npm run icons:generate
 ```
+
+### GitHub Actions による自動ビルド & リリース配布
+
+- **CI（`.github/workflows/ci.yml`）**: `main` への push および PR 時に `typecheck` / `test` / `build` / Electron E2E テストを自動実行します。
+- **テスト用バイナリのダウンロード（手動実行）**: GitHub の **Actions → Build & Release → Run workflow** から任意ブランチの macOS / Windows / Linux バイナリをビルドし、Artifacts からダウンロードできます。
+- **GitHub Releases への配布（タグ push）**:
+  1. `package.json` の `version` を更新してコミット
+  2. バージョンに一致するタグを push（例: `git tag v0.1.0 && git push origin v0.1.0`）
+  3. 3 OS のバイナリが添付された **Draft Release** が自動作成されるため、内容を確認して Publish します。
 
 > **トラブルシューティング（macOS・Node.js v26 + npm 11 環境）**
 > npm 11 のセキュリティ設定や `extract-zip` の挙動により、初回 `npm install` 後に Electron バイナリの展開が不完全になる場合があります。起動時に Electron バイナリのエラーが出る場合は、`~/Library/Caches/electron/` にダウンロードされた zip を `node_modules/electron/dist` へ手動展開（`unzip`）し、`node_modules/electron/path.txt` に `Electron.app/Contents/MacOS/Electron` を書き込むことで解消します。
