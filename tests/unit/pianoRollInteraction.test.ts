@@ -256,4 +256,73 @@ describe('pianoRollInteraction', () => {
     expect(drumHarness.env.addNote).toHaveBeenCalledTimes(1)
     expect(session.drag.kind).toBe('none')
   })
+
+  it('previews only the grabbed note when dragging vertically and avoids re-triggering on horizontal or clamped moves', () => {
+    const n1: Note = { id: 'n1', pitch: 60, startTick: 0, durationTick: PPQN, velocity: 0.8 }
+    const n2: Note = { id: 'n2', pitch: 64, startTick: 0, durationTick: PPQN, velocity: 0.8 }
+    const { env } = makeEnv({
+      selectedNoteIds: ['n1', 'n2'],
+      track: {
+        id: 't-synth',
+        name: 'Synth',
+        type: 'synth',
+        instrumentId: 'soft-sine',
+        colorIndex: 0,
+        volume: 0.8,
+        muted: false,
+        solo: false,
+        notes: [n1, n2]
+      }
+    })
+    const session = createInteractionSession()
+    const c4Y = pitchToContentY(60, env.metrics) + 5
+    const bodyX = KEY_COL_WIDTH + 15
+
+    // Grab n1 -> previews original pitch (60)
+    handlePianoRollPointerDown(
+      session,
+      { viewX: bodyX, viewY: c4Y, contentX: bodyX, contentY: c4Y },
+      { button: 0, shiftKey: false },
+      env
+    )
+    expect(env.previewNote).toHaveBeenCalledTimes(1)
+    expect(env.previewNote).toHaveBeenLastCalledWith(env.track, 60, 0.14)
+
+    // Move horizontally only -> no additional preview
+    handlePianoRollPointerMove(
+      session,
+      { contentX: bodyX + PPQN * env.metrics.pxPerTick, contentY: c4Y },
+      env
+    )
+    expect(env.previewNote).toHaveBeenCalledTimes(1)
+
+    // Move up by 2 semitones -> previews only grabbed note's new pitch (62), not n2 (66)
+    handlePianoRollPointerMove(
+      session,
+      {
+        contentX: bodyX + PPQN * env.metrics.pxPerTick,
+        contentY: c4Y - 2 * env.metrics.rowHeight
+      },
+      env
+    )
+    expect(env.previewNote).toHaveBeenCalledTimes(2)
+    expect(env.previewNote).toHaveBeenLastCalledWith(env.track, 62, 0.14)
+
+    // Drag far above maxPitch -> clamps group once and does not re-trigger when dragging even further
+    handlePianoRollPointerMove(
+      session,
+      { contentX: bodyX, contentY: c4Y - 60 * env.metrics.rowHeight },
+      env
+    )
+    expect(env.previewNote).toHaveBeenCalledTimes(3)
+    // n2 hits 96 so n1 stops at 92
+    expect(env.previewNote).toHaveBeenLastCalledWith(env.track, 92, 0.14)
+
+    handlePianoRollPointerMove(
+      session,
+      { contentX: bodyX, contentY: c4Y - 70 * env.metrics.rowHeight },
+      env
+    )
+    expect(env.previewNote).toHaveBeenCalledTimes(3)
+  })
 })

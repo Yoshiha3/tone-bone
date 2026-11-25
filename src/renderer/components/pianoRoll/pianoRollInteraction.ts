@@ -42,6 +42,8 @@ export type DragState =
       startY: number
       origNotes: Note[]
       selectedSet: Set<string>
+      anchorNoteId: string
+      lastPreviewPitch: number
       lastDeltaTick: number
       lastDeltaPitch: number
     }
@@ -139,6 +141,8 @@ export function handlePianoRollPointerDown(
         startY: contentY,
         origNotes: track.notes.map((n) => ({ ...n })),
         selectedSet: new Set(nextSelected),
+        anchorNoteId: hit.note.id,
+        lastPreviewPitch: hit.note.pitch,
         lastDeltaTick: 0,
         lastDeltaPitch: 0
       }
@@ -241,6 +245,11 @@ export function handlePianoRollPointerMove(
         metrics.maxPitch,
         metrics.totalTicks
       )
+      const movedAnchor = session.previewNotes.find((n) => n.id === drag.anchorNoteId)
+      if (movedAnchor && movedAnchor.pitch !== drag.lastPreviewPitch) {
+        drag.lastPreviewPitch = movedAnchor.pitch
+        env.previewNote(track, movedAnchor.pitch, 0.14)
+      }
     }
     return
   }
