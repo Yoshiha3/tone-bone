@@ -1,5 +1,6 @@
 appId: com.tonebone.app
 productName: Tone Bone
+copyright: Copyright © 2026 Tone Bone
 directories:
   buildResources: build
   output: dist
@@ -11,16 +12,39 @@ extraResources:
     to: themes
   - from: resources/sounds
     to: sounds
+  - from: build/icon.png
+    to: icon.png
+artifactName: Tone-Bone-${version}-${os}-${arch}.${ext}
 mac:
   category: public.app-category.music
+  icon: build/icon.icns
   target:
-    - dmg
-    - dir
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+dmg:
+  title: Tone Bone ${version}
 win:
+  icon: build/icon.ico
   target:
-    - nsis
-    - portable
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+nsis:
+  artifactName: Tone-Bone-${version}-${os}-${arch}-setup.${ext}
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: Tone-Bone-${version}-${os}-${arch}-portable.${ext}
 linux:
-  target:
-    - AppImage
+  icon: build/icon.png
   category: Audio
+  target:
+    - target: AppImage
+      arch:
+        - x64

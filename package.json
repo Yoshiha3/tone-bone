@@ -2,6 +2,13 @@
   "name": "tone-bone",
   "version": "0.1.0",
   "description": "Simple, visual, extensible DAW built with Electron, React, and TypeScript",
+  "author": "Yoshiha3",
+  "license": "MIT",
+  "homepage": "https://github.com/Yoshiha3/tone-bone",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yoshiha3/tone-bone.git"
+  },
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -12,7 +19,11 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "npm run build && playwright test",
-    "package": "npm run build && electron-builder"
+    "icons:generate": "node scripts/generate-icons.mjs",
+    "package": "npm run build && electron-builder --publish never",
+    "package:mac": "npm run build && electron-builder --mac --publish never",
+    "package:win": "npm run build && electron-builder --win --publish never",
+    "package:linux": "npm run build && electron-builder --linux --publish never"
   },
   "dependencies": {
     "react": "^19.0.0",

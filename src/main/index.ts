@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { registerAllIpcHandlers } from './ipc'
 import {
@@ -16,12 +17,21 @@ function getBuiltinResourcesSubdir(subdir: 'themes' | 'sounds'): string {
   return join(app.getAppPath(), 'resources', subdir)
 }
 
+function getWindowIconPath(): string | undefined {
+  const candidate = app.isPackaged
+    ? join(process.resourcesPath, 'icon.png')
+    : join(app.getAppPath(), 'build', 'icon.png')
+  return existsSync(candidate) ? candidate : undefined
+}
+
 const rendererHtmlPath = join(__dirname, '../renderer/index.html')
 const devServerUrl = process.env.ELECTRON_RENDERER_URL
 
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
+  const windowIcon = process.platform === 'darwin' ? undefined : getWindowIconPath()
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -29,6 +39,7 @@ function createWindow(): void {
     minHeight: 640,
     title: 'Tone Bone',
     backgroundColor: '#f6f7f9',
+    ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
