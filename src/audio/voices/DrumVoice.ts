@@ -8,6 +8,10 @@ type DrumLaneHandler = (
   gainLevel: number
 ) => void
 
+const NOISE_BUFFER_DURATION_SEC = 2.4
+// Classic 808-style inharmonic metallic frequencies in true crash cymbal register
+const CYMBAL_METALLIC_FREQS = [205.3, 304.4, 369.6, 522.7, 540.0, 800.0] as const
+
 const DRUM_LANE_BY_PITCH = new Map<number, DrumLaneId>(
   DRUM_LANES.map((lane) => [lane.pitch, lane.id])
 )
@@ -29,7 +33,7 @@ export class DrumVoice implements AudioVoice {
   private getNoiseBuffer(context: BaseAudioContext): AudioBuffer {
     let cached = this.noiseCache.get(context)
     if (!cached) {
-      cached = createNoiseBuffer(context, 0.5)
+      cached = createNoiseBuffer(context, NOISE_BUFFER_DURATION_SEC)
       this.noiseCache.set(context, cached)
     }
     return cached
@@ -43,7 +47,8 @@ export class DrumVoice implements AudioVoice {
     clap: (ctx, dest, time, gain) => this.triggerClap(ctx, dest, time, gain * 0.75),
     rim: (ctx, dest, time, gain) => this.triggerRim(ctx, dest, time, gain * 0.7),
     'tom-low': (ctx, dest, time, gain) => this.triggerTom(ctx, dest, time, gain * 0.85, 115, 58),
-    'tom-high': (ctx, dest, time, gain) => this.triggerTom(ctx, dest, time, gain * 0.85, 185, 95)
+    'tom-high': (ctx, dest, time, gain) => this.triggerTom(ctx, dest, time, gain * 0.85, 185, 95),
+    cymbal: (ctx, dest, time, gain) => this.triggerCymbal(ctx, dest, time, gain * 0.95)
   }
 
   trigger(params: VoiceTriggerParams): void {
@@ -205,5 +210,89 @@ export class DrumVoice implements AudioVoice {
     env.connect(destination)
     osc.start(time)
     osc.stop(time + 0.24)
+  }
+
+  private triggerCymbal(
+    context: BaseAudioContext,
+    destination: AudioNode,
+    time: number,
+    gainLevel: number
+  ): void {
+    // 1. Clean broadband splash burst for a natural, uncolored crash attack
+    const burstNoise = context.createBufferSource()
+    burstNoise.buffer = this.getNoiseBuffer(context)
+
+    const burstHp = context.createBiquadFilter()
+    burstHp.type = 'highpass'
+    burstHp.frequency.setValueAtTime(1200, time)
+
+    const burstLp = context.createBiquadFilter()
+    burstLp.type = 'lowpass'
+    burstLp.frequency.setValueAtTime(10500, time)
+
+    const burstEnv = context.createGain()
+    burstEnv.gain.setValueAtTime(gainLevel * 0.56, time)
+    burstEnv.gain.exponentialRampToValueAtTime(gainLevel * 0.12, time + 0.065)
+    burstEnv.gain.exponentialRampToValueAtTime(0.0008, time + 0.2)
+
+    burstNoise.connect(burstHp)
+    burstHp.connect(burstLp)
+    burstLp.connect(burstEnv)
+    burstEnv.connect(destination)
+    burstNoise.start(time)
+    burstNoise.stop(time + 0.22)
+
+    // 2. Open, uncolored crash wash with natural high-frequency decay sweep
+    const washNoise = context.createBufferSource()
+    washNoise.buffer = this.getNoiseBuffer(context)
+
+    const washHp = context.createBiquadFilter()
+    washHp.type = 'highpass'
+    washHp.frequency.setValueAtTime(1900, time)
+
+    const washLp = context.createBiquadFilter()
+    washLp.type = 'lowpass'
+    washLp.frequency.setValueAtTime(12000, time)
+    washLp.frequency.exponentialRampToValueAtTime(3800, time + 1.9)
+
+    const washEnv = context.createGain()
+    washEnv.gain.setValueAtTime(0.0001, time)
+    washEnv.gain.linearRampToValueAtTime(gainLevel * 0.44, time + 0.004)
+    washEnv.gain.exponentialRampToValueAtTime(gainLevel * 0.22, time + 0.24)
+    washEnv.gain.exponentialRampToValueAtTime(0.0006, time + 1.95)
+
+    washNoise.connect(washHp)
+    washHp.connect(washLp)
+    washLp.connect(washEnv)
+    washEnv.connect(destination)
+    washNoise.start(time)
+    washNoise.stop(time + 2.02)
+
+    // 3. Subtle metallic shimmer underneath so it reads as cymbal rather than plain noise
+    const metalHp = context.createBiquadFilter()
+    metalHp.type = 'highpass'
+    metalHp.frequency.setValueAtTime(3200, time)
+
+    const metalLp = context.createBiquadFilter()
+    metalLp.type = 'lowpass'
+    metalLp.frequency.setValueAtTime(9500, time)
+
+    const metalEnv = context.createGain()
+    metalEnv.gain.setValueAtTime(0.0001, time)
+    metalEnv.gain.linearRampToValueAtTime(gainLevel * 0.08, time + 0.005)
+    metalEnv.gain.exponentialRampToValueAtTime(0.0006, time + 1.65)
+
+    metalHp.connect(metalLp)
+    metalLp.connect(metalEnv)
+    metalEnv.connect(destination)
+
+    for (const freq of CYMBAL_METALLIC_FREQS) {
+      const osc = context.createOscillator()
+      osc.type = 'square'
+      osc.frequency.setValueAtTime(freq, time)
+      osc.connect(metalHp)
+      osc.start(time)
+      osc.stop(time + 1.72)
+    }
   }
 }

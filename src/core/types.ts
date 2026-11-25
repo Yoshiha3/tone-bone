@@ -71,7 +71,8 @@ export const DRUM_LANES = [
   { pitch: 4, id: 'clap', label: 'Clap', shortLabel: 'CP' },
   { pitch: 5, id: 'rim', label: 'Rim', shortLabel: 'RM' },
   { pitch: 6, id: 'tom-low', label: 'Low Tom', shortLabel: 'LT' },
-  { pitch: 7, id: 'tom-high', label: 'High Tom', shortLabel: 'HT' }
+  { pitch: 7, id: 'tom-high', label: 'High Tom', shortLabel: 'HT' },
+  { pitch: 8, id: 'cymbal', label: 'Cymbal', shortLabel: 'CY' }
 ] as const satisfies readonly DrumLane[]
 
 export type DrumLaneId = (typeof DRUM_LANES)[number]['id']

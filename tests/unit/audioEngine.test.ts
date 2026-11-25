@@ -3,7 +3,7 @@ import { AudioEngine } from '@audio/AudioEngine'
 import { WavExporter } from '@audio/exporters/WavExporter'
 import { DrumVoice } from '@audio/voices/DrumVoice'
 import { SynthVoice } from '@audio/voices/SynthVoice'
-import { PPQN, TICKS_PER_BAR, type InstrumentDef, type Project } from '@core/types'
+import { DRUM_LANES, PPQN, TICKS_PER_BAR, type InstrumentDef, type Project } from '@core/types'
 
 function createFakeAudioParam() {
   return {
@@ -207,11 +207,11 @@ describe('SynthVoice & DrumVoice', () => {
     expect(ctx._filters[0].frequency.setValueAtTime).toHaveBeenCalledWith(1800, 2.0)
   })
 
-  it('triggers all 8 drum lanes plus fallback and caches noise buffer per AudioContext', () => {
+  it('triggers all drum lanes (including electronic cymbal) plus fallback and caches noise buffer per AudioContext', () => {
     const ctx = createFakeAudioContext()
     const drum = new DrumVoice()
 
-    for (const pitch of [0, 1, 2, 3, 4, 5, 6, 7, 99]) {
+    for (const pitch of [...DRUM_LANES.map((l) => l.pitch), 99]) {
       drum.trigger({
         context: ctx as unknown as BaseAudioContext,
         destination: ctx.destination,
@@ -222,10 +222,27 @@ describe('SynthVoice & DrumVoice', () => {
       })
     }
 
-    // Noise buffer should be created only once and reused across snare/hihats/clap
+    // Noise buffer should be created only once and reused across snare/hihats/clap/cymbal
     expect(ctx.createBuffer).toHaveBeenCalledTimes(1)
-    expect(ctx._oscillators.length).toBeGreaterThanOrEqual(6)
-    expect(ctx._bufferSources.length).toBeGreaterThanOrEqual(6)
+    expect(ctx.createBuffer.mock.calls[0][1]).toBeGreaterThanOrEqual(Math.floor(ctx.sampleRate * 2.0))
+    expect(ctx._oscillators.length).toBeGreaterThanOrEqual(12)
+    expect(ctx._bufferSources.length).toBeGreaterThanOrEqual(8)
+
+    // Verify dedicated electronic crash cymbal synthesis (splash burst + wash + subtle metallic shimmer)
+    const cymbalCtx = createFakeAudioContext()
+    const cymbalLane = DRUM_LANES.find((l) => l.id === 'cymbal')!
+    expect(cymbalLane).toBeDefined()
+    drum.trigger({
+      context: cymbalCtx as unknown as BaseAudioContext,
+      destination: cymbalCtx.destination,
+      pitch: cymbalLane.pitch,
+      startTime: 1.0,
+      durationSeconds: 0.1,
+      velocity: 0.85
+    })
+    expect(cymbalCtx._oscillators.filter((o) => o.type === 'square')).toHaveLength(6)
+    expect(cymbalCtx._bufferSources).toHaveLength(2)
+    expect(cymbalCtx._filters.length).toBeGreaterThanOrEqual(6)
   })
 })
 
