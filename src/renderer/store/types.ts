@@ -78,6 +78,7 @@ export interface ProjectSlice {
   toggleLoop(): void
   addTrack(type: TrackType): void
   removeTrack(trackId: string): void
+  reorderTracks(fromIndex: number, toIndex: number): void
   updateTrack(trackId: string, patch: Partial<Omit<Track, 'id' | 'notes'>>): void
   toggleMute(trackId: string): void
   toggleSolo(trackId: string): void

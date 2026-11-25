@@ -278,6 +278,34 @@ describe('Store Slices: projectSlice', () => {
     store.getState().undo()
     expect(store.getState().project.title).not.toBe('Snapshot Title')
   })
+
+  it('reorders tracks with Undo/Redo support and guards invalid indices', () => {
+    const store = createProjectStore({
+      platform: new MemoryPlatformAdapter(),
+      codecs: createDefaultCodecRegistry()
+    })
+    const initialIds = store.getState().project.tracks.map((t) => t.id)
+    expect(initialIds.length).toBeGreaterThanOrEqual(3)
+
+    // Invalid or no-op moves do not push history
+    store.getState().reorderTracks(0, 0)
+    store.getState().reorderTracks(-1, 1)
+    store.getState().reorderTracks(0, 99)
+    expect(store.getState().canUndo()).toBe(false)
+
+    // Move first track to the end
+    store.getState().reorderTracks(0, 2)
+    expect(store.getState().project.tracks.map((t) => t.id)).toEqual([
+      initialIds[1],
+      initialIds[2],
+      initialIds[0]
+    ])
+    expect(store.getState().canUndo()).toBe(true)
+
+    // Undo restores previous order
+    store.getState().undo()
+    expect(store.getState().project.tracks.map((t) => t.id)).toEqual(initialIds)
+  })
 })
 
 describe('Store Slices: workspaceSlice error handling & fallbacks', () => {

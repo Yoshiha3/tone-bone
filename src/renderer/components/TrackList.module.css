@@ -65,6 +65,37 @@
   border-color: var(--accent-primary);
 }
 
+.cardDragging {
+  opacity: 0.45;
+}
+
+.cardDropAbove {
+  box-shadow: 0 -2px 0 0 var(--accent-primary);
+}
+
+.cardDropBelow {
+  box-shadow: 0 2px 0 0 var(--accent-primary);
+}
+
+.dragHandle {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: -1px;
+  padding: 2px 3px 2px 0;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.dragHandle:hover {
+  color: var(--text-primary);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
 .colorBar {
   position: absolute;
   left: 0;

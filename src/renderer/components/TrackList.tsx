@@ -10,12 +10,17 @@ export function TrackList() {
   const setSelectedTrackId = useProjectStore((s) => s.setSelectedTrackId)
   const addTrack = useProjectStore((s) => s.addTrack)
   const removeTrack = useProjectStore((s) => s.removeTrack)
+  const reorderTracks = useProjectStore((s) => s.reorderTracks)
   const updateTrack = useProjectStore((s) => s.updateTrack)
   const toggleMute = useProjectStore((s) => s.toggleMute)
   const toggleSolo = useProjectStore((s) => s.toggleSolo)
 
   const [editingTrackId, setEditingTrackId] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
+
+  const canReorder = tracks.length > 1
 
   const startRename = (trackId: string, currentName: string): void => {
     setEditingTrackId(trackId)
@@ -28,6 +33,18 @@ export function TrackList() {
       updateTrack(trackId, { name: trimmed })
     }
     setEditingTrackId(null)
+  }
+
+  const clearDragState = (): void => {
+    setDraggingIndex(null)
+    setDropTargetIndex(null)
+  }
+
+  const handleDropOnTrack = (targetIndex: number): void => {
+    if (draggingIndex !== null && draggingIndex !== targetIndex) {
+      reorderTracks(draggingIndex, targetIndex)
+    }
+    clearDragState()
   }
 
   return (
@@ -50,14 +67,42 @@ export function TrackList() {
       </div>
 
       <div className={styles.list}>
-        {tracks.map((track) => {
+        {tracks.map((track, idx) => {
           const isSelected = track.id === selectedTrackId
           const compatibleInstruments = instruments.filter((i) => i.type === track.type)
+          const isDragging = draggingIndex === idx
+          const isDropAbove =
+            draggingIndex !== null && dropTargetIndex === idx && draggingIndex > idx
+          const isDropBelow =
+            draggingIndex !== null && dropTargetIndex === idx && draggingIndex < idx
+
           return (
             <div
               key={track.id}
-              className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+              className={[
+                styles.card,
+                isSelected ? styles.cardSelected : '',
+                isDragging ? styles.cardDragging : '',
+                isDropAbove ? styles.cardDropAbove : '',
+                isDropBelow ? styles.cardDropBelow : ''
+              ]
+                .filter(Boolean)
+                .join(' ')}
               onClick={() => setSelectedTrackId(track.id)}
+              onDragOver={(e) => {
+                if (draggingIndex === null) return
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                if (dropTargetIndex !== idx) {
+                  setDropTargetIndex(idx)
+                }
+              }}
+              onDrop={(e) => {
+                if (draggingIndex === null) return
+                e.preventDefault()
+                handleDropOnTrack(idx)
+              }}
+              data-track-card="true"
               data-testid={`track-card-${track.id}`}
             >
               <div
@@ -66,6 +111,28 @@ export function TrackList() {
               />
 
               <div className={styles.rowTop}>
+                {canReorder && (
+                  <span
+                    className={styles.dragHandle}
+                    draggable
+                    title="ドラッグして並べ替え"
+                    aria-label={`${track.name} を並べ替え`}
+                    onClick={(e) => e.stopPropagation()}
+                    onDragStart={(e) => {
+                      setDraggingIndex(idx)
+                      e.dataTransfer.effectAllowed = 'move'
+                      e.dataTransfer.setData('text/plain', track.id)
+                      const cardEl = e.currentTarget.closest('[data-track-card]')
+                      if (cardEl && typeof e.dataTransfer.setDragImage === 'function') {
+                        e.dataTransfer.setDragImage(cardEl, 18, 18)
+                      }
+                    }}
+                    onDragEnd={clearDragState}
+                    data-testid={`track-drag-handle-${track.id}`}
+                  >
+                    ⋮⋮
+                  </span>
+                )}
                 {editingTrackId === track.id ? (
                   <input
                     type="text"

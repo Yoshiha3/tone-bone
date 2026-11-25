@@ -62,6 +62,26 @@ export function createProjectSlice(
       }
     },
 
+    reorderTracks: (fromIndex, toIndex) => {
+      const { tracks } = get().project
+      if (
+        fromIndex === toIndex ||
+        fromIndex < 0 ||
+        toIndex < 0 ||
+        fromIndex >= tracks.length ||
+        toIndex >= tracks.length
+      ) {
+        return
+      }
+      commit((p) => {
+        const nextTracks = [...p.tracks]
+        const [moved] = nextTracks.splice(fromIndex, 1)
+        if (!moved) return p
+        nextTracks.splice(toIndex, 0, moved)
+        return { ...p, tracks: nextTracks }
+      })
+    },
+
     updateTrack: (trackId, patch) => {
       commit((p) => ({
         ...p,
