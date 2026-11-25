@@ -1,9 +1,10 @@
-import { DRUM_LANES, PPQN, TICKS_PER_BAR, type Note } from '@core/types'
+import { TRACK_TYPE_SPECS } from '@core/trackTypes'
+import { PPQN, TICKS_PER_BAR, type Note } from '@core/types'
 
 export const KEY_COL_WIDTH = 72
 export const RULER_HEIGHT = 26
-export const SYNTH_MIN_PITCH = 36 // C2
-export const SYNTH_MAX_PITCH = 84 // C6
+export const SYNTH_MIN_PITCH = TRACK_TYPE_SPECS.synth.minPitch
+export const SYNTH_MAX_PITCH = TRACK_TYPE_SPECS.synth.maxPitch
 export const SYNTH_ROW_HEIGHT = 22
 export const DRUM_ROW_HEIGHT = 38
 export const CREATE_DRAG_THRESHOLD_PX = 8
@@ -37,8 +38,9 @@ export function createPianoRollMetrics(
   bars: number,
   pxPerBeat: number
 ): PianoRollMetrics {
-  const minPitch = isDrum ? 0 : SYNTH_MIN_PITCH
-  const maxPitch = isDrum ? DRUM_LANES.length - 1 : SYNTH_MAX_PITCH
+  const spec = isDrum ? TRACK_TYPE_SPECS.drum : TRACK_TYPE_SPECS.synth
+  const minPitch = spec.minPitch
+  const maxPitch = spec.maxPitch
   const rowCount = maxPitch - minPitch + 1
   const rowHeight = isDrum ? DRUM_ROW_HEIGHT : SYNTH_ROW_HEIGHT
   const pxPerTick = pxPerBeat / PPQN

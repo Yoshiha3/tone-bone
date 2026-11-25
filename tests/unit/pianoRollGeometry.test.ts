@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TRACK_TYPE_SPECS } from '@core/trackTypes'
 import type { Note } from '@core/types'
 import {
   computeVisibleBounds,
@@ -7,7 +8,9 @@ import {
   createPianoRollMetrics,
   hitTestNote,
   KEY_COL_WIDTH,
-  pitchToContentY
+  pitchToContentY,
+  SYNTH_MAX_PITCH,
+  SYNTH_MIN_PITCH
 } from '@renderer/components/pianoRoll/pianoRollGeometry'
 
 describe('pianoRollGeometry', () => {
@@ -47,5 +50,13 @@ describe('pianoRollGeometry', () => {
     expect(hitEdge?.isRightEdge).toBe(true)
 
     expect(hitTestNote(notes, noteLeft - 10, ny, metrics)).toBeNull()
+  })
+
+  it('derives synth pitch range from TRACK_TYPE_SPECS (C1 to C7)', () => {
+    expect(SYNTH_MIN_PITCH).toBe(TRACK_TYPE_SPECS.synth.minPitch)
+    expect(SYNTH_MAX_PITCH).toBe(TRACK_TYPE_SPECS.synth.maxPitch)
+    const metrics = createPianoRollMetrics(false, 4, 84)
+    expect(metrics.minPitch).toBe(24)
+    expect(metrics.maxPitch).toBe(96)
   })
 })

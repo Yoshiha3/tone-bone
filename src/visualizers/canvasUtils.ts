@@ -1,3 +1,4 @@
+import { TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { DRUM_LANES } from '@core/types'
 
 /**
@@ -29,6 +30,7 @@ export function pitchToVisualYRatio(pitch: number, isDrum: boolean): number {
   if (isDrum) {
     return 0.84 - (pitch / Math.max(1, DRUM_LANES.length)) * 0.18
   }
-  const norm = (pitch - 36) / (84 - 36)
+  const { minPitch, maxPitch } = TRACK_TYPE_SPECS.synth
+  const norm = (pitch - minPitch) / Math.max(1, maxPitch - minPitch)
   return 0.76 - Math.max(0, Math.min(1, norm)) * 0.68
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createDemoProject } from '@core/demoProject'
+import { TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { DRUM_LANES } from '@core/types'
 import { FALLBACK_VISUALIZER_PRESET } from '@packs/packMerger'
 import { drawRoundedRect, pitchToVisualYRatio } from '@visualizers/canvasUtils'
@@ -58,9 +59,10 @@ describe('VisualizerRegistry', () => {
 
 describe('canvasUtils', () => {
   it('maps synth and drum pitches monotonically and clamps out-of-range synth pitches', () => {
-    const lowSynth = pitchToVisualYRatio(36, false)
+    const { minPitch, maxPitch } = TRACK_TYPE_SPECS.synth
+    const lowSynth = pitchToVisualYRatio(minPitch, false)
     const midSynth = pitchToVisualYRatio(60, false)
-    const highSynth = pitchToVisualYRatio(84, false)
+    const highSynth = pitchToVisualYRatio(maxPitch, false)
     expect(highSynth).toBeLessThan(midSynth)
     expect(midSynth).toBeLessThan(lowSynth)
 
