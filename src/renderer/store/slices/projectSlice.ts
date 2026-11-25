@@ -6,7 +6,7 @@ import {
   redoHistory,
   undoHistory
 } from '@core/history'
-import { clamp, cloneNotesForPaste, moveNotes } from '@core/musicMath'
+import { clamp, cloneNotesForPaste, getNotesEndTick, moveNotes } from '@core/musicMath'
 import { getTrackTypeSpec } from '@core/trackTypes'
 import { MAX_BARS, TICKS_PER_BAR, type Note, type Project, type Track } from '@core/types'
 import { createId } from '../helpers'
@@ -209,12 +209,13 @@ export function createProjectSlice(
 
     pasteNotes: (targetTick) => {
       const { project, selectedTrackId, clipboardNotes } = get()
-      if (clipboardNotes.length === 0) return
+      if (clipboardNotes.length === 0) return null
       const maxTicks = project.bars * TICKS_PER_BAR
       const pasted = cloneNotesForPaste(clipboardNotes, targetTick, maxTicks, () =>
         createId('note')
       )
-      if (pasted.length === 0) return
+      const rawEndTick = getNotesEndTick(pasted)
+      if (pasted.length === 0 || rawEndTick === null) return null
       commit((p) => ({
         ...p,
         tracks: p.tracks.map((t) =>
@@ -225,6 +226,7 @@ export function createProjectSlice(
         selectedNoteIds: pasted.map((n) => n.id),
         statusMessage: `${pasted.length}個のノーツをペーストしました`
       })
+      return Math.min(maxTicks, rawEndTick)
     },
 
     commitProjectSnapshot: (nextProject) => {

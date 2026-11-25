@@ -104,7 +104,7 @@ export interface ProjectSlice {
   deleteNote(trackId: string, noteId: string): void
   moveSelectedNotes(deltaTick: number, deltaPitch: number): Note | null
   copySelectedNotes(): void
-  pasteNotes(targetTick: number): void
+  pasteNotes(targetTick: number): number | null
   commitProjectSnapshot(nextProject: Project): void
 
   undo(): void

@@ -4,6 +4,7 @@ import {
   findNotesInRect,
   getAudibleTrackIds,
   getGridTickStep,
+  getNotesEndTick,
   midiToFrequency,
   midiToNoteName,
   moveNotes,
@@ -94,6 +95,8 @@ describe('musicMath', () => {
       { id: 'copy-1', pitch: 60, startTick: 960, durationTick: 160, velocity: 0.8 },
       { id: 'copy-2', pitch: 64, startTick: 1120, durationTick: 160, velocity: 0.8 }
     ])
+    expect(getNotesEndTick(pasted)).toBe(1280)
+    expect(getNotesEndTick([])).toBeNull()
   })
 
   it('resolves DAW Mute and Solo states accurately', () => {

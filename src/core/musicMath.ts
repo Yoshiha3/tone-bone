@@ -145,6 +145,15 @@ export function cloneNotesForPaste(
     .filter((note) => note.startTick < maxTotalTicks)
 }
 
+export function getNotesEndTick(notes: readonly Note[]): number | null {
+  if (notes.length === 0) return null
+  let maxEnd = 0
+  for (const note of notes) {
+    maxEnd = Math.max(maxEnd, note.startTick + note.durationTick)
+  }
+  return maxEnd
+}
+
 /**
  * Resolves which tracks should produce sound according to standard DAW Mute/Solo rules.
  * If any track has solo === true, only soloed (and non-muted) tracks are active.

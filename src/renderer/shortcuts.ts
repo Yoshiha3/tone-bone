@@ -15,6 +15,7 @@ export interface ShortcutActions {
   togglePlayPause: () => void
   requestNewProject: () => Promise<boolean>
   getCurrentTick: () => number
+  seek?: (tick: number) => void
   previewNote?: (track: Track, pitch: number, durationSeconds?: number) => void
 }
 
@@ -129,7 +130,12 @@ export const SHORTCUT_BINDINGS: readonly ShortcutBinding[] = [
     views: ['edit'],
     keys: ['v'],
     mod: true,
-    run: ({ state, actions }) => state.pasteNotes(Math.round(actions.getCurrentTick()))
+    run: ({ state, actions }) => {
+      const endTick = state.pasteNotes(Math.round(actions.getCurrentTick()))
+      if (endTick !== null) {
+        actions.seek?.(endTick)
+      }
+    }
   },
   {
     id: 'save-project-as',

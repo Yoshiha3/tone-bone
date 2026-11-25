@@ -25,6 +25,7 @@ function createHarness() {
     togglePlayPause: vi.fn(),
     requestNewProject: vi.fn(async () => true),
     getCurrentTick: vi.fn(() => 960.4),
+    seek: vi.fn(),
     previewNote: vi.fn()
   }
   return { store, actions }
@@ -257,5 +258,28 @@ describe('dispatchKeyboardShortcut', () => {
         actions
       }).matched
     ).toBe(false)
+  })
+
+  it('advances playhead to pasted end tick on Cmd+V and does not seek when clipboard is empty', () => {
+    const { store, actions } = createHarness()
+    store.setState({ viewMode: 'edit' })
+
+    // Empty clipboard -> paste does not move playhead
+    dispatchKeyboardShortcut(keyEvent({ key: 'v', metaKey: true }), {
+      state: store.getState(),
+      actions
+    })
+    expect(actions.seek).not.toHaveBeenCalled()
+
+    // Copy the first note (duration 360 ticks) and paste at current tick (960) -> seeks to 1320
+    const firstNote = store.getState().project.tracks[0].notes[0]
+    store.getState().setSelectedNoteIds([firstNote.id])
+    store.getState().copySelectedNotes()
+
+    dispatchKeyboardShortcut(keyEvent({ key: 'v', metaKey: true }), {
+      state: store.getState(),
+      actions
+    })
+    expect(actions.seek).toHaveBeenCalledWith(960 + firstNote.durationTick)
   })
 })
