@@ -1,23 +1,29 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getTrackTypeSpec, TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { audioEngine } from '../audioContext'
-import { useProjectStore } from '../store/useProjectStore'
+import { projectStore, useProjectStore } from '../store/useProjectStore'
 import { readThemeTokens, type ThemeTokens } from '../themeTokens'
 import {
   createPianoRollMetrics,
   SYNTH_MAX_PITCH,
-  SYNTH_ROW_HEIGHT
+  SYNTH_ROW_HEIGHT,
+  ZOOM_BUTTON_STEP
 } from './pianoRoll/pianoRollGeometry'
-import { PIANO_ROLL_TOOLS, type PianoRollToolMode } from './pianoRoll/pianoRollInteraction'
+import { PIANO_ROLL_TOOLS } from './pianoRoll/pianoRollInteraction'
 import { renderPianoRollFrame } from './pianoRoll/pianoRollRenderer'
 import { usePianoRollInteraction } from './pianoRoll/usePianoRollInteraction'
 import styles from './PianoRoll.module.css'
 
 export function PianoRoll() {
   const project = useProjectStore((s) => s.project)
+  const currentFilePath = useProjectStore((s) => s.currentFilePath)
   const selectedTrackId = useProjectStore((s) => s.selectedTrackId)
   const selectedNoteIds = useProjectStore((s) => s.selectedNoteIds)
   const gridDivision = useProjectStore((s) => s.gridDivision)
+  const toolMode = useProjectStore((s) => s.pianoRollToolMode)
+  const setToolMode = useProjectStore((s) => s.setPianoRollToolMode)
+  const pxPerBeat = useProjectStore((s) => s.pxPerBeat)
+  const setPxPerBeat = useProjectStore((s) => s.setPxPerBeat)
   const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
   const lastNoteDurationTick = useProjectStore((s) => s.lastNoteDurationTick)
   const activeThemePackIds = useProjectStore((s) => s.mergedTheme.activeThemePackIds)
@@ -26,8 +32,6 @@ export function PianoRoll() {
   const canUndoFlag = useProjectStore((s) => s.history.past.length > 0)
   const canRedoFlag = useProjectStore((s) => s.history.future.length > 0)
 
-  const [toolMode, setToolMode] = useState<PianoRollToolMode>('draw')
-  const [pxPerBeat, setPxPerBeat] = useState(84)
   const [viewport, setViewport] = useState({ width: 960, height: 600 })
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -69,6 +73,20 @@ export function PianoRoll() {
     return () => observer.disconnect()
   }, [])
 
+  // Persist scroll position across Stage Mode transitions without triggering React re-renders
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = (): void => {
+      projectStore.getState().setPianoRollScroll({ left: el.scrollLeft, top: el.scrollTop })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      projectStore.getState().setPianoRollScroll({ left: el.scrollLeft, top: el.scrollTop })
+    }
+  }, [])
+
   // Refresh cached CSS theme tokens only when active theme packs change
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -77,13 +95,24 @@ export function PianoRoll() {
     return () => cancelAnimationFrame(raf)
   }, [activeThemePackIds])
 
-  // Center synth scroll around C4 when switching to a synth track
+  // Restore saved scroll position, or center synth scroll around C4 on first visit to a track
   useEffect(() => {
     const el = scrollRef.current
-    if (!el || isDrum) return
-    const c4Row = SYNTH_MAX_PITCH - 60
-    el.scrollTop = Math.max(0, c4Row * SYNTH_ROW_HEIGHT - el.clientHeight * 0.45)
-  }, [selectedTrackId, isDrum])
+    if (!el) return
+    const saved = projectStore.getState().pianoRollScroll
+    el.scrollLeft = saved.left
+    if (saved.top !== null) {
+      el.scrollTop = saved.top
+      return
+    }
+    if (!isDrum) {
+      const c4Row = SYNTH_MAX_PITCH - 60
+      el.scrollTop = Math.max(0, c4Row * SYNTH_ROW_HEIGHT - el.clientHeight * 0.45)
+    } else {
+      el.scrollTop = 0
+    }
+    projectStore.getState().setPianoRollScroll({ left: el.scrollLeft, top: el.scrollTop })
+  }, [selectedTrackId, isDrum, currentFilePath])
 
   useEffect(() => {
     let rafId = 0
@@ -204,16 +233,18 @@ export function PianoRoll() {
           <button
             type="button"
             className={styles.toolBtn}
-            onClick={() => setPxPerBeat((z) => Math.max(48, z - 16))}
+            onClick={() => setPxPerBeat(pxPerBeat - ZOOM_BUTTON_STEP)}
             title="縮小"
+            data-testid="zoom-out-btn"
           >
             -
           </button>
           <button
             type="button"
             className={styles.toolBtn}
-            onClick={() => setPxPerBeat((z) => Math.min(160, z + 16))}
+            onClick={() => setPxPerBeat(pxPerBeat + ZOOM_BUTTON_STEP)}
             title="拡大"
+            data-testid="zoom-in-btn"
           >
             +
           </button>

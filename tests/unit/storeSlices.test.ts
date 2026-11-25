@@ -65,6 +65,32 @@ describe('Store Slices: uiSlice', () => {
     expect(store.getState().selectedHomeProjectPath).toBe('/a.json')
   })
 
+  it('persists zoom, tool mode, and scroll across Stage Mode transitions and selects all notes in active track', () => {
+    const store = createProjectStore({
+      platform: new MemoryPlatformAdapter(),
+      codecs: createDefaultCodecRegistry()
+    })
+
+    store.getState().setViewMode('edit')
+    store.getState().setPxPerBeat(132)
+    store.getState().setPianoRollToolMode('select')
+    store.getState().setPianoRollScroll({ left: 320, top: 480 })
+
+    // Switching to Stage Mode and back preserves editor zoom, tool, and scroll position
+    store.getState().setViewMode('stage')
+    store.getState().setViewMode('edit')
+    expect(store.getState().pxPerBeat).toBe(132)
+    expect(store.getState().pianoRollToolMode).toBe('select')
+    expect(store.getState().pianoRollScroll).toEqual({ left: 320, top: 480 })
+
+    // selectAllNotes selects every note on the currently selected track
+    const activeTrack = store
+      .getState()
+      .project.tracks.find((t) => t.id === store.getState().selectedTrackId)!
+    store.getState().selectAllNotes()
+    expect(store.getState().selectedNoteIds).toEqual(activeTrack.notes.map((n) => n.id))
+  })
+
   it('resolves leave prompt promises and cancels superseded prompts safely', async () => {
     const store = createProjectStore({
       platform: new MemoryPlatformAdapter(),

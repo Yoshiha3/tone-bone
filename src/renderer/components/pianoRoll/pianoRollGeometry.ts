@@ -1,3 +1,4 @@
+import { clamp } from '@core/musicMath'
 import { TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { PPQN, TICKS_PER_BAR, type Note } from '@core/types'
 
@@ -8,6 +9,15 @@ export const SYNTH_MAX_PITCH = TRACK_TYPE_SPECS.synth.maxPitch
 export const SYNTH_ROW_HEIGHT = 22
 export const DRUM_ROW_HEIGHT = 38
 export const CREATE_DRAG_THRESHOLD_PX = 8
+
+export const DEFAULT_PX_PER_BEAT = 84
+export const MIN_PX_PER_BEAT = 32
+export const MAX_PX_PER_BEAT = 240
+export const ZOOM_BUTTON_STEP = 16
+
+export function clampPxPerBeat(pxPerBeat: number): number {
+  return Math.round(clamp(pxPerBeat, MIN_PX_PER_BEAT, MAX_PX_PER_BEAT) * 100) / 100
+}
 
 export interface PianoRollMetrics {
   isDrum: boolean

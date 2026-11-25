@@ -1,5 +1,6 @@
 import { PPQN } from '@core/types'
 import type { LeaveDecision } from '@persistence/types'
+import { clampPxPerBeat, DEFAULT_PX_PER_BEAT } from '../../components/pianoRoll/pianoRollGeometry'
 import type { StoreGet, StoreSet, UiSlice } from '../types'
 
 export function createUiSlice(
@@ -12,6 +13,9 @@ export function createUiSlice(
     selectedNoteIds: [],
     clipboardNotes: [],
     gridDivision: '1/16',
+    pxPerBeat: DEFAULT_PX_PER_BEAT,
+    pianoRollToolMode: 'draw',
+    pianoRollScroll: { left: 0, top: null },
     lastNoteDurationTick: PPQN / 2,
     viewMode: 'home',
     settingsOpen: false,
@@ -42,10 +46,22 @@ export function createUiSlice(
     setViewMode: (viewMode) => set({ viewMode }),
     setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
     setGridDivision: (gridDivision) => set({ gridDivision }),
+    setPxPerBeat: (pxPerBeat) => set({ pxPerBeat: clampPxPerBeat(pxPerBeat) }),
+    setPianoRollToolMode: (pianoRollToolMode) => set({ pianoRollToolMode }),
+    setPianoRollScroll: (pianoRollScroll) => set({ pianoRollScroll }),
     setLastNoteDurationTick: (ticks) =>
       set({ lastNoteDurationTick: Math.max(30, Math.round(ticks)) }),
     setIsPlaying: (isPlaying) => set({ isPlaying }),
-    setSelectedTrackId: (selectedTrackId) => set({ selectedTrackId, selectedNoteIds: [] }),
+    setSelectedTrackId: (selectedTrackId) =>
+      set((s) =>
+        s.selectedTrackId === selectedTrackId
+          ? { selectedTrackId, selectedNoteIds: [] }
+          : {
+              selectedTrackId,
+              selectedNoteIds: [],
+              pianoRollScroll: { left: s.pianoRollScroll.left, top: null }
+            }
+      ),
     setSelectedNoteIds: (selectedNoteIds) => set({ selectedNoteIds }),
     selectAllNotes: () => {
       const { project, selectedTrackId } = get()

@@ -19,7 +19,15 @@ import type { SaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
 import type { LeaveDecision, SaveContext } from '@persistence/types'
 import type { PlatformAdapter } from '@platform/types'
 
+import type { PianoRollToolMode } from '../components/pianoRoll/pianoRollInteraction'
+
 export type ViewMode = 'home' | 'edit' | 'stage'
+
+export interface PianoRollScrollState {
+  left: number
+  /** null means not yet positioned for the current track (auto-center C4 on synth tracks) */
+  top: number | null
+}
 
 export interface UnsavedChangesPrompt {
   message: string
@@ -33,6 +41,9 @@ export interface UiSlice {
   selectedNoteIds: string[]
   clipboardNotes: Note[]
   gridDivision: GridDivision
+  pxPerBeat: number
+  pianoRollToolMode: PianoRollToolMode
+  pianoRollScroll: PianoRollScrollState
   lastNoteDurationTick: number
   viewMode: ViewMode
   settingsOpen: boolean
@@ -47,6 +58,9 @@ export interface UiSlice {
   setViewMode(mode: ViewMode): void
   setSettingsOpen(open: boolean): void
   setGridDivision(division: GridDivision): void
+  setPxPerBeat(pxPerBeat: number): void
+  setPianoRollToolMode(mode: PianoRollToolMode): void
+  setPianoRollScroll(scroll: PianoRollScrollState): void
   setLastNoteDurationTick(ticks: number): void
   setIsPlaying(playing: boolean): void
   setSelectedTrackId(trackId: string): void
