@@ -150,4 +150,116 @@ describe('IPC Contract & Main Handler Registration', () => {
     expect(writeRes).toEqual({ canceled: false, filePath: writePath })
     expect(readFileSync(writePath, 'utf-8')).toBe('{"ok":1}')
   })
+
+  it('blocks unauthorized path access while permitting dialog-approved external files and workspaces', async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-ipc-sec-'))
+    tempDirs.push(tempRoot)
+    const userDataDir = join(tempRoot, 'userData')
+    const workspaceDir = join(tempRoot, 'ToneBone')
+    const externalDir = join(tempRoot, 'External')
+    const externalProjectPath = join(externalDir, 'outside.json')
+    const approvedNewWs = join(tempRoot, 'NewWorkspace')
+    const unapprovedWs = join(tempRoot, 'UnapprovedWorkspace')
+    const settingsRepo = new SettingsRepository(userDataDir, workspaceDir)
+
+    const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
+    const fakeIpcMain = {
+      handle: (channel: string, listener: (event: unknown, ...args: unknown[]) => unknown) => {
+        handlers.set(channel, listener)
+      }
+    }
+
+    const showSaveDialog = vi.fn().mockResolvedValueOnce({
+      canceled: false,
+      filePath: externalProjectPath
+    })
+    const showOpenDialog = vi
+      .fn()
+      .mockResolvedValueOnce({ canceled: false, filePaths: [externalProjectPath] })
+      .mockResolvedValueOnce({ canceled: false, filePaths: [approvedNewWs] })
+    const openPath = vi.fn(async () => '')
+    const trashItem = vi.fn(async () => {})
+
+    registerAllIpcHandlers({
+      ipcMain: fakeIpcMain,
+      dialog: { showOpenDialog, showSaveDialog } as unknown as Parameters<
+        typeof registerAllIpcHandlers
+      >[0]['dialog'],
+      shell: { openPath, trashItem },
+      settingsRepo,
+      getBuiltinResourcesSubdir: (subdir) => resolve(__dirname, '../../resources', subdir)
+    })
+
+    // Arbitrary outside paths must be rejected before dialog approval
+    const secretPath = join(tempRoot, 'secret.json')
+    writeFileSync(secretPath, '{"secret":true}', 'utf-8')
+
+    expect(() => handlers.get(IPC_CHANNELS.readWorkspaceProject)!(null, secretPath)).toThrow(
+      /ワークスペース外/
+    )
+    expect(() =>
+      handlers.get(IPC_CHANNELS.renameWorkspaceProject)!(null, secretPath, 'Hijacked')
+    ).toThrow(/ワークスペース外/)
+    expect(() => handlers.get(IPC_CHANNELS.duplicateWorkspaceProject)!(null, secretPath)).toThrow(
+      /ワークスペース外/
+    )
+    await expect(
+      handlers.get(IPC_CHANNELS.deleteWorkspaceProject)!(null, secretPath)
+    ).rejects.toThrow(/ワークスペース外/)
+    expect(() =>
+      handlers.get(IPC_CHANNELS.writeProjectFile)!(null, secretPath, '{"evil":true}')
+    ).toThrow(/許可されていない保存先パス/)
+
+    // Unapproved workspace directory changes and invalid openFolder targets must be rejected
+    const currentSettings = settingsRepo.load()
+    expect(() =>
+      handlers.get(IPC_CHANNELS.saveSettings)!(null, {
+        ...currentSettings,
+        workspaceDir: unapprovedWs
+      })
+    ).toThrow(/許可されていないワークスペースパス/)
+    await expect(handlers.get(IPC_CHANNELS.openFolder)!(null, '../etc')).rejects.toThrow(
+      /不正なフォルダ指定/
+    )
+
+    // Dialog-approved external file can be saved and subsequently overwritten via writeProjectFile
+    const { mkdirSync } = await import('fs')
+    mkdirSync(externalDir, { recursive: true })
+    await handlers.get(IPC_CHANNELS.saveProjectFile)!(null, {
+      suggestedName: '../../ignored-traversal.json',
+      content: '{"v":1}',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    expect(showSaveDialog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPath: join(workspaceDir, 'projects', 'ignored-traversal.json')
+      })
+    )
+    const overwriteRes = await handlers.get(IPC_CHANNELS.writeProjectFile)!(
+      null,
+      externalProjectPath,
+      '{"v":2}'
+    )
+    expect(overwriteRes).toEqual({ canceled: false, filePath: externalProjectPath })
+    expect(readFileSync(externalProjectPath, 'utf-8')).toBe('{"v":2}')
+
+    // Dialog-approved openProjectFile also grants overwrite permission
+    const opened = await handlers.get(IPC_CHANNELS.openProjectFile)!(null, {
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    expect(opened).toEqual({
+      canceled: false,
+      filePath: externalProjectPath,
+      content: '{"v":2}'
+    })
+
+    // Dialog-approved chooseWorkspaceDir permits saveSettings with the new workspaceDir
+    const chosen = await handlers.get(IPC_CHANNELS.chooseWorkspaceDir)!(null)
+    expect(chosen).toBe(approvedNewWs)
+    const savedSettings = handlers.get(IPC_CHANNELS.saveSettings)!(null, {
+      ...currentSettings,
+      workspaceDir: approvedNewWs
+    })
+    expect(savedSettings).toMatchObject({ workspaceDir: approvedNewWs })
+  })
 })
