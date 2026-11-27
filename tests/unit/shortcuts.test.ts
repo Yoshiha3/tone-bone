@@ -78,6 +78,35 @@ describe('dispatchKeyboardShortcut', () => {
     expect(setViewSpy).toHaveBeenCalledWith('edit')
   })
 
+  it('clears selected notes on Escape in edit mode without interfering with text inputs or empty selection', () => {
+    const { store, actions } = createHarness()
+    store.setState({ viewMode: 'edit', selectedNoteIds: [] })
+
+    // No selection -> Escape does not match
+    expect(
+      dispatchKeyboardShortcut(keyEvent({ key: 'Escape' }), { state: store.getState(), actions })
+        .matched
+    ).toBe(false)
+
+    // With selection in text input -> Escape is left to the input (e.g. cancel track rename)
+    store.setState({ selectedNoteIds: ['n1', 'n2'] })
+    expect(
+      dispatchKeyboardShortcut(keyEvent({ key: 'Escape', isTextInput: true }), {
+        state: store.getState(),
+        actions
+      }).matched
+    ).toBe(false)
+    expect(store.getState().selectedNoteIds).toEqual(['n1', 'n2'])
+
+    // With selection in edit mode -> Escape clears selection
+    const res = dispatchKeyboardShortcut(keyEvent({ key: 'Escape' }), {
+      state: store.getState(),
+      actions
+    })
+    expect(res).toEqual({ matched: true, preventDefault: true, id: 'clear-note-selection' })
+    expect(store.getState().selectedNoteIds).toEqual([])
+  })
+
   it('suppresses non-Escape shortcuts while typing in inputs or when overlays are open', () => {
     const { store, actions } = createHarness()
     store.setState({ viewMode: 'edit' })
@@ -300,6 +329,7 @@ describe('formatShortcut', () => {
     expect(formatShortcut('transpose-up-semitone', { isMac: false })).toBe('↑')
     expect(formatShortcut('transpose-down-octave', { isMac: false })).toBe('Shift+↓')
     expect(formatShortcut('escape-overlay-or-stage', { isMac: true })).toBe('Esc')
+    expect(formatShortcut('clear-note-selection', { isMac: true })).toBe('Esc')
   })
 
   it('detects macOS platform strings accurately', () => {

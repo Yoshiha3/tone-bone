@@ -272,7 +272,8 @@ export function PianoRoll() {
 
         <span className={styles.hint}>
           クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 /{' '}
-          {formatShortcut('select-all-notes')}・{formatShortcut('transpose-up-semitone')}
+          {formatShortcut('clear-note-selection')}: 選択解除 / {formatShortcut('select-all-notes')}
+          ・{formatShortcut('transpose-up-semitone')}
           {formatShortcut('transpose-down-semitone')}: 移調 / {formatShortcut('copy-notes')}・
           {formatShortcut('paste-notes')}: コピペ
         </span>

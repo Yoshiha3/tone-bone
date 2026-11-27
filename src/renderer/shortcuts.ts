@@ -86,11 +86,21 @@ export const SHORTCUT_BINDINGS = [
     keys: ['escape'],
     allowInOverlay: true,
     preventDefault: false,
+    when: ({ state }) =>
+      Boolean(state.unsavedPrompt || state.settingsOpen || state.viewMode === 'stage'),
     run: ({ state }) => {
       if (state.unsavedPrompt) state.resolveLeaveDecision('cancel')
       else if (state.settingsOpen) state.setSettingsOpen(false)
       else if (state.viewMode === 'stage') state.setViewMode('edit')
     }
+  },
+  {
+    id: 'clear-note-selection',
+    description: 'ノーツの選択を解除',
+    views: ['edit'],
+    keys: ['escape'],
+    when: ({ state }) => state.selectedNoteIds.length > 0,
+    run: ({ state }) => state.setSelectedNoteIds([])
   },
   {
     id: 'new-project',
