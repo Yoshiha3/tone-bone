@@ -1,6 +1,6 @@
 {
   "name": "tone-bone",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simple, visual, extensible DAW built with Electron, React, and TypeScript",
   "author": "Yoshiha3",
   "license": "MIT",
