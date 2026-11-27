@@ -1,4 +1,4 @@
-import { pushHistory } from '@core/history'
+import { createHistory, pushHistory } from '@core/history'
 import {
   DEFAULT_SOUND_PACK_ID,
   DEFAULT_THEME_PACK_ID,
@@ -9,12 +9,46 @@ import {
 import { FALLBACK_VISUALIZER_PRESET } from '@packs/packMerger'
 import type { SaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
 import type { LeaveDecision, SaveContext } from '@persistence/types'
-import type { ProjectStoreDeps, SliceRuntime, StoreGet, StoreSet } from './types'
+import type { ProjectStoreDeps, ProjectStoreState, SliceRuntime, StoreGet, StoreSet } from './types'
 
 let idCounter = 1
 
 export function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${idCounter++}`
+}
+
+export function formatError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+export type LoadedProjectState = Pick<
+  ProjectStoreState,
+  | 'history'
+  | 'project'
+  | 'selectedTrackId'
+  | 'selectedNoteIds'
+  | 'clipboardNotes'
+  | 'pianoRollScroll'
+  | 'currentFilePath'
+  | 'isDirty'
+  | 'viewMode'
+>
+
+export function buildLoadedProjectState(
+  project: Project,
+  filePath: string | null
+): LoadedProjectState {
+  return {
+    history: createHistory(project),
+    project,
+    selectedTrackId: project.tracks[0]?.id ?? '',
+    selectedNoteIds: [],
+    clipboardNotes: [],
+    pianoRollScroll: { left: 0, top: null },
+    currentFilePath: filePath,
+    isDirty: false,
+    viewMode: 'edit'
+  }
 }
 
 export const INITIAL_MERGED_THEME: MergedThemeConfig = {

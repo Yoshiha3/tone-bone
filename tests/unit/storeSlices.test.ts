@@ -3,6 +3,7 @@ import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { DRUM_LANES, MAX_BARS, type SoundPack, type ThemePack } from '@core/types'
 import { createDefaultSaveStrategyRegistry } from '@persistence/SaveStrategyRegistry'
 import { MemoryPlatformAdapter } from '@platform/MemoryPlatformAdapter'
+import { buildLoadedProjectState, formatError } from '@renderer/store/helpers'
 import { createProjectStore } from '@renderer/store/useProjectStore'
 
 function createSampleThemePack(id: string, bg: string): ThemePack {
@@ -410,5 +411,49 @@ describe('Store Slices: workspaceSlice error handling & fallbacks', () => {
     vi.spyOn(platform, 'deleteWorkspaceProject').mockRejectedValueOnce(new Error('Del failed'))
     expect(await store.getState().deleteWorkspaceProject('/x.json')).toBe(false)
     expect(store.getState().statusMessage).toContain('削除失敗')
+  })
+
+  it('builds consistent loaded project state and formats unknown error values', () => {
+    const empty = {
+      title: 'Empty',
+      bpm: 120,
+      bars: 4,
+      loopEnabled: true,
+      tracks: []
+    }
+    const loadedEmpty = buildLoadedProjectState(empty, null)
+    expect(loadedEmpty.project).toBe(empty)
+    expect(loadedEmpty.history.present).toBe(empty)
+    expect(loadedEmpty.history.past).toEqual([])
+    expect(loadedEmpty.selectedTrackId).toBe('')
+    expect(loadedEmpty.selectedNoteIds).toEqual([])
+    expect(loadedEmpty.clipboardNotes).toEqual([])
+    expect(loadedEmpty.pianoRollScroll).toEqual({ left: 0, top: null })
+    expect(loadedEmpty.currentFilePath).toBeNull()
+    expect(loadedEmpty.isDirty).toBe(false)
+    expect(loadedEmpty.viewMode).toBe('edit')
+
+    const withTrack = {
+      ...empty,
+      tracks: [
+        {
+          id: 'track-1',
+          name: 'Synth',
+          type: 'synth' as const,
+          instrumentId: 'soft-sine',
+          colorIndex: 0,
+          volume: 0.8,
+          muted: false,
+          solo: false,
+          notes: []
+        }
+      ]
+    }
+    const loadedWithTrack = buildLoadedProjectState(withTrack, '/songs/demo.json')
+    expect(loadedWithTrack.selectedTrackId).toBe('track-1')
+    expect(loadedWithTrack.currentFilePath).toBe('/songs/demo.json')
+
+    expect(formatError(new Error('Disk full'))).toBe('Disk full')
+    expect(formatError('plain string error')).toBe('plain string error')
   })
 })

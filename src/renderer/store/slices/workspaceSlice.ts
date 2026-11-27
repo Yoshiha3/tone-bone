@@ -1,6 +1,6 @@
 import { createDemoProject, createEmptyProject } from '@core/demoProject'
-import { createHistory } from '@core/history'
 import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
+import { buildLoadedProjectState, formatError } from '../helpers'
 import type { SliceRuntime, StoreGet, StoreSet, WorkspaceSlice } from '../types'
 
 export function createWorkspaceSlice(
@@ -42,7 +42,7 @@ export function createWorkspaceSlice(
         deps.onThemeChanged?.(mergedTheme)
       } catch (err) {
         set({
-          statusMessage: `初期化エラー: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `初期化エラー: ${formatError(err)}`
         })
       }
     },
@@ -59,7 +59,7 @@ export function createWorkspaceSlice(
         })
       } catch (err) {
         set({
-          statusMessage: `プロジェクト一覧の取得失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `プロジェクト一覧の取得失敗: ${formatError(err)}`
         })
       }
     },
@@ -73,22 +73,15 @@ export function createWorkspaceSlice(
           return false
         }
         const { project } = deps.codecs.decodeAuto(result.content)
+        const resolvedPath = result.filePath ?? filePath
         set({
-          history: createHistory(project),
-          project,
-          selectedTrackId: project.tracks[0]?.id ?? '',
-          selectedNoteIds: [],
-          clipboardNotes: [],
-          pianoRollScroll: { left: 0, top: null },
-          currentFilePath: result.filePath ?? filePath,
-          selectedHomeProjectPath: result.filePath ?? filePath,
-          isDirty: false,
-          viewMode: 'edit'
+          ...buildLoadedProjectState(project, resolvedPath),
+          selectedHomeProjectPath: resolvedPath
         })
         return true
       } catch (err) {
         set({
-          statusMessage: `読み込み失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `読み込み失敗: ${formatError(err)}`
         })
         return false
       }
@@ -110,7 +103,7 @@ export function createWorkspaceSlice(
         return summary
       } catch (err) {
         set({
-          statusMessage: `作成失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `作成失敗: ${formatError(err)}`
         })
         return null
       }
@@ -134,7 +127,7 @@ export function createWorkspaceSlice(
         return true
       } catch (err) {
         set({
-          statusMessage: err instanceof Error ? err.message : String(err)
+          statusMessage: formatError(err)
         })
         return false
       }
@@ -151,7 +144,7 @@ export function createWorkspaceSlice(
         return copy
       } catch (err) {
         set({
-          statusMessage: `複製失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `複製失敗: ${formatError(err)}`
         })
         return null
       }
@@ -168,7 +161,7 @@ export function createWorkspaceSlice(
         return true
       } catch (err) {
         set({
-          statusMessage: `削除失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `削除失敗: ${formatError(err)}`
         })
         return false
       }
@@ -207,7 +200,7 @@ export function createWorkspaceSlice(
       } catch (err) {
         set({
           isAutoSaving: false,
-          statusMessage: `自動保存失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `自動保存失敗: ${formatError(err)}`
         })
         return false
       }
@@ -270,21 +263,13 @@ export function createWorkspaceSlice(
       try {
         const { project } = deps.codecs.decodeAuto(result.content)
         set({
-          history: createHistory(project),
-          project,
-          selectedTrackId: project.tracks[0]?.id ?? '',
-          selectedNoteIds: [],
-          clipboardNotes: [],
-          pianoRollScroll: { left: 0, top: null },
-          currentFilePath: result.filePath ?? null,
-          isDirty: false,
-          viewMode: 'edit',
+          ...buildLoadedProjectState(project, result.filePath ?? null),
           statusMessage: `「${project.title}」を読み込みました`
         })
         return true
       } catch (err) {
         set({
-          statusMessage: `読み込み失敗: ${err instanceof Error ? err.message : String(err)}`
+          statusMessage: `読み込み失敗: ${formatError(err)}`
         })
         return false
       }
@@ -294,15 +279,7 @@ export function createWorkspaceSlice(
       saveStrategies.disposeAll()
       const fresh = createEmptyProject()
       set({
-        history: createHistory(fresh),
-        project: fresh,
-        selectedTrackId: fresh.tracks[0]?.id ?? '',
-        selectedNoteIds: [],
-        clipboardNotes: [],
-        pianoRollScroll: { left: 0, top: null },
-        currentFilePath: null,
-        isDirty: false,
-        viewMode: 'edit',
+        ...buildLoadedProjectState(fresh, null),
         statusMessage: '新規プロジェクトを作成しました'
       })
     }
