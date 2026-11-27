@@ -3,7 +3,7 @@ import { getTrackTypeSpec } from '@core/trackTypes'
 import { pitchToVisualYRatio } from '@visualizers/canvasUtils'
 import { createDefaultVisualizerRegistry } from '@visualizers/VisualizerRegistry'
 import type { ActiveRipple } from '@visualizers/types'
-import { togglePlayPause } from '../actions'
+import { stopPlayback, togglePlayPause } from '../actions'
 import { audioEngine } from '../audioContext'
 import { useProjectStore } from '../store/useProjectStore'
 import { readTrackPalette } from '../themeTokens'
@@ -122,6 +122,14 @@ export function StageVisualizer() {
             data-testid="stage-play-btn"
           >
             {isPlaying ? '一時停止' : '再生'}
+          </button>
+          <button
+            type="button"
+            onClick={stopPlayback}
+            title="停止して先頭に戻る"
+            data-testid="stage-stop-btn"
+          >
+            停止
           </button>
           <button type="button" onClick={() => setViewMode('edit')} data-testid="exit-stage-btn">
             編集に戻る
