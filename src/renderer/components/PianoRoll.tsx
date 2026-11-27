@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getTrackTypeSpec, TRACK_TYPE_SPECS } from '@core/trackTypes'
 import { audioEngine } from '../audioContext'
+import { formatShortcut } from '../shortcuts'
 import { projectStore, useProjectStore } from '../store/useProjectStore'
 import { readThemeTokens, type ThemeTokens } from '../themeTokens'
 import {
@@ -270,8 +271,10 @@ export function PianoRoll() {
         </div>
 
         <span className={styles.hint}>
-          クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 / Cmd+A・↑↓: 移調 / Cmd+C・V:
-          コピペ
+          クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 /{' '}
+          {formatShortcut('select-all-notes')}・{formatShortcut('transpose-up-semitone')}
+          {formatShortcut('transpose-down-semitone')}: 移調 / {formatShortcut('copy-notes')}・
+          {formatShortcut('paste-notes')}: コピペ
         </span>
 
         <div className={styles.footerGroup}>

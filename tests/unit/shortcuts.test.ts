@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { MemoryPlatformAdapter } from '@platform/MemoryPlatformAdapter'
-import { dispatchKeyboardShortcut, type ShortcutKeyEvent } from '@renderer/shortcuts'
+import {
+  dispatchKeyboardShortcut,
+  formatShortcut,
+  isMacPlatform,
+  type ShortcutKeyEvent
+} from '@renderer/shortcuts'
 import { createProjectStore } from '@renderer/store/useProjectStore'
 
 function keyEvent(partial: Partial<ShortcutKeyEvent>): ShortcutKeyEvent {
@@ -281,5 +286,25 @@ describe('dispatchKeyboardShortcut', () => {
       actions
     })
     expect(actions.seek).toHaveBeenCalledWith(960 + firstNote.durationTick)
+  })
+})
+
+describe('formatShortcut', () => {
+  it('formats modifier and special keys from SHORTCUT_BINDINGS for macOS and non-macOS', () => {
+    expect(formatShortcut('save-project', { isMac: true })).toBe('Cmd+S')
+    expect(formatShortcut('save-project', { isMac: false })).toBe('Ctrl+S')
+    expect(formatShortcut('save-project-as', { isMac: true })).toBe('Cmd+Shift+S')
+    expect(formatShortcut('save-project-as', { isMac: false })).toBe('Ctrl+Shift+S')
+    expect(formatShortcut('toggle-play-pause', { isMac: false })).toBe('Space')
+    expect(formatShortcut('transpose-up-semitone', { isMac: false })).toBe('↑')
+    expect(formatShortcut('transpose-down-octave', { isMac: false })).toBe('Shift+↓')
+    expect(formatShortcut('escape-overlay-or-stage', { isMac: true })).toBe('Esc')
+  })
+
+  it('detects macOS platform strings accurately', () => {
+    expect(isMacPlatform('MacIntel')).toBe(true)
+    expect(isMacPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X)')).toBe(true)
+    expect(isMacPlatform('Win32')).toBe(false)
+    expect(isMacPlatform('Linux x86_64')).toBe(false)
   })
 })

@@ -57,7 +57,7 @@ function isSelectedTrackMelodic(state: ProjectStoreState): boolean {
  * Declarative global keyboard shortcut table.
  * Adding, remapping, or displaying shortcuts only requires editing this table.
  */
-export const SHORTCUT_BINDINGS: readonly ShortcutBinding[] = [
+export const SHORTCUT_BINDINGS = [
   {
     id: 'escape-overlay-or-stage',
     description: 'モーダルを閉じる / Stage Mode を終了',
@@ -210,7 +210,54 @@ export const SHORTCUT_BINDINGS: readonly ShortcutBinding[] = [
     keys: ['delete', 'backspace'],
     run: ({ state }) => state.deleteSelectedNotes()
   }
-]
+] as const satisfies readonly ShortcutBinding[]
+
+export type ShortcutId = (typeof SHORTCUT_BINDINGS)[number]['id']
+
+const KEY_LABELS: Readonly<Record<string, string>> = {
+  arrowup: '↑',
+  arrowdown: '↓',
+  escape: 'Esc',
+  enter: 'Enter',
+  delete: 'Delete',
+  backspace: 'Backspace'
+}
+
+export function isMacPlatform(platform?: string): boolean {
+  const value =
+    platform ??
+    (typeof navigator !== 'undefined' ? `${navigator.platform} ${navigator.userAgent}` : '')
+  return /mac/i.test(value)
+}
+
+function formatKeyToken(binding: ShortcutBinding): string {
+  if (binding.code === 'Space') return 'Space'
+  const raw = binding.keys?.[0]
+  if (!raw) return ''
+  return KEY_LABELS[raw.toLowerCase()] ?? raw.toUpperCase()
+}
+
+export function formatShortcutBinding(
+  binding: ShortcutBinding,
+  options?: { isMac?: boolean }
+): string {
+  const isMac = options?.isMac ?? isMacPlatform()
+  const parts: string[] = []
+  if (binding.mod) parts.push(isMac ? 'Cmd' : 'Ctrl')
+  if (binding.shift) parts.push('Shift')
+  const keyLabel = formatKeyToken(binding)
+  if (keyLabel) parts.push(keyLabel)
+  return parts.join('+')
+}
+
+export function formatShortcut(
+  id: ShortcutId,
+  options?: { isMac?: boolean },
+  bindings: readonly ShortcutBinding[] = SHORTCUT_BINDINGS
+): string {
+  const found = bindings.find((b) => b.id === id)
+  return found ? formatShortcutBinding(found, options) : ''
+}
 
 function matchesBinding(
   binding: ShortcutBinding,

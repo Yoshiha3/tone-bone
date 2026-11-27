@@ -8,6 +8,7 @@ import {
   stopPlayback,
   togglePlayPause
 } from '../actions'
+import { formatShortcut } from '../shortcuts'
 import { defaultSaveStrategyRegistry, useProjectStore } from '../store/useProjectStore'
 import { NumericInput } from './NumericInput'
 import styles from './TransportBar.module.css'
@@ -45,10 +46,13 @@ export function TransportBar() {
   }
 
   const saveStrategy = defaultSaveStrategyRegistry.get(saveMode)
+  const playShortcut = formatShortcut('toggle-play-pause')
+  const newShortcut = formatShortcut('new-project')
+  const saveShortcut = formatShortcut('save-project')
   const saveTooltip =
     saveStrategy.flushesSilentlyOnClose && currentFilePath
-      ? '自動保存 ON（Cmd/Ctrl+S で今すぐ保存 / Shift+クリックで別名保存）'
-      : '保存 (Cmd/Ctrl+S) / Shift+クリックで別名保存'
+      ? `自動保存 ON（${saveShortcut} で今すぐ保存 / Shift+クリックで別名保存）`
+      : `保存 (${saveShortcut}) / Shift+クリックで別名保存`
 
   return (
     <header className={styles.bar} data-testid="transport-bar">
@@ -71,7 +75,7 @@ export function TransportBar() {
           className={styles.playBtn}
           onClick={togglePlayPause}
           data-testid="play-toggle-btn"
-          title="再生 / 一時停止 (Space)"
+          title={`再生 / 一時停止 (${playShortcut})`}
         >
           {isPlaying ? '一時停止' : '再生'}
         </button>
@@ -144,7 +148,7 @@ export function TransportBar() {
         <button
           type="button"
           onClick={() => void requestNewProject()}
-          title="新規作成 (Cmd/Ctrl+N)"
+          title={`新規作成 (${newShortcut})`}
           data-testid="new-project-btn"
         >
           新規
