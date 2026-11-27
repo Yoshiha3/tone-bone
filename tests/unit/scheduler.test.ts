@@ -16,7 +16,11 @@ describe('collectScheduledNotes (monotonic loop scheduler)', () => {
     const simulateTotalSec = loopDurationSec * 3
 
     let scheduledUntilAbs = 0
-    const countsByLoop = [new Map<string, number>(), new Map<string, number>(), new Map<string, number>()]
+    const countsByLoop = [
+      new Map<string, number>(),
+      new Map<string, number>(),
+      new Map<string, number>()
+    ]
 
     for (let t = 0; t < simulateTotalSec; t += stepSec) {
       const playheadAbs = secondsToTicks(t, project.bpm)

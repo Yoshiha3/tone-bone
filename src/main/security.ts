@@ -102,10 +102,7 @@ export function applySessionSecurity(targetSession: Session): void {
   targetSession.setPermissionCheckHandler(() => false)
 }
 
-export function applyWindowSecurity(
-  window: BrowserWindow,
-  options: RendererSecurityOptions
-): void {
+export function applyWindowSecurity(window: BrowserWindow, options: RendererSecurityOptions): void {
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event, targetUrl) => {
     if (!isAllowedRendererUrl(targetUrl, options.rendererHtmlPath, options.devServerUrl)) {

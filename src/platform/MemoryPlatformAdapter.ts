@@ -25,7 +25,10 @@ function sanitizeFileName(raw: string): string {
   return cleaned.length > 0 ? cleaned : 'Untitled'
 }
 
-function summarizeMemoryProject(filePath: string, entry: StoredMemoryProject): ProjectSummary | null {
+function summarizeMemoryProject(
+  filePath: string,
+  entry: StoredMemoryProject
+): ProjectSummary | null {
   try {
     const parsed = JSON.parse(entry.content) as Record<string, unknown>
     if (
@@ -190,12 +193,14 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
       filePath = `${dir}/${sanitizeFileName(title)}.json`
     }
     const parsed = JSON.parse(content) as Record<string, unknown>
-    const updatedContent = JSON.stringify({ ...parsed, title }, null, 2) + '\n'
+    const updatedContent = `${JSON.stringify({ ...parsed, title }, null, 2)}\n`
     const entry = { content: updatedContent, updatedAtMs: this.nextTimestamp() }
     this.workspaceFiles.set(filePath, entry)
     this.lastSavedProjectPath = filePath
     this.lastSavedProjectContent = updatedContent
-    return summarizeMemoryProject(filePath, entry)!
+    const summary = summarizeMemoryProject(filePath, entry)
+    if (!summary) throw new Error('Invalid project content')
+    return summary
   }
 
   async renameWorkspaceProject(filePath: string, newTitle: string): Promise<ProjectSummary> {
@@ -218,7 +223,7 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     }
 
     const parsed = JSON.parse(existing.content) as Record<string, unknown>
-    const updatedContent = JSON.stringify({ ...parsed, title: trimmed }, null, 2) + '\n'
+    const updatedContent = `${JSON.stringify({ ...parsed, title: trimmed }, null, 2)}\n`
     const entry = { content: updatedContent, updatedAtMs: this.nextTimestamp() }
     if (!isSame) this.workspaceFiles.delete(filePath)
     this.workspaceFiles.set(targetPath, entry)
@@ -226,7 +231,9 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
       this.lastSavedProjectPath = targetPath
       this.lastSavedProjectContent = updatedContent
     }
-    return summarizeMemoryProject(targetPath, entry)!
+    const summary = summarizeMemoryProject(targetPath, entry)
+    if (!summary) throw new Error('Invalid project content')
+    return summary
   }
 
   async duplicateWorkspaceProject(filePath: string): Promise<ProjectSummary> {

@@ -99,7 +99,10 @@
   justify-content: space-between;
   gap: 12px;
   background: var(--bg-surface);
-  transition: border-color 0.12s ease, background-color 0.12s ease, opacity 0.12s ease,
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    opacity 0.12s ease,
     box-shadow 0.12s ease;
 }
 
@@ -229,7 +232,9 @@
   align-items: center;
   gap: 12px;
   background: var(--bg-surface);
-  transition: border-color 0.12s ease, background-color 0.12s ease;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease;
 }
 
 .choiceCard:hover {
@@ -260,7 +265,10 @@
   font-size: 12px;
   font-weight: 700;
   color: transparent;
-  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease;
 }
 
 .checkCircleSelected {

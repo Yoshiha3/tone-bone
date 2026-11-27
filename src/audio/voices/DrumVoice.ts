@@ -42,7 +42,8 @@ export class DrumVoice implements AudioVoice {
   private readonly laneHandlers: Record<DrumLaneId, DrumLaneHandler> = {
     kick: (ctx, dest, time, gain) => this.triggerKick(ctx, dest, time, gain),
     snare: (ctx, dest, time, gain) => this.triggerSnare(ctx, dest, time, gain),
-    'hihat-closed': (ctx, dest, time, gain) => this.triggerHiHat(ctx, dest, time, gain * 0.65, 0.06),
+    'hihat-closed': (ctx, dest, time, gain) =>
+      this.triggerHiHat(ctx, dest, time, gain * 0.65, 0.06),
     'hihat-open': (ctx, dest, time, gain) => this.triggerHiHat(ctx, dest, time, gain * 0.65, 0.28),
     clap: (ctx, dest, time, gain) => this.triggerClap(ctx, dest, time, gain * 0.75),
     rim: (ctx, dest, time, gain) => this.triggerRim(ctx, dest, time, gain * 0.7),

@@ -5,11 +5,7 @@ import { sanitizeDialogFileName, sanitizeExtension } from '../pathSecurity'
 import { ensureWorkspaceDirectories } from '../settingsRepository'
 import type { ResolvedIpcHandlerDeps } from './index'
 
-export function registerAudioIpc({
-  ipcMain,
-  dialog,
-  settingsRepo
-}: ResolvedIpcHandlerDeps): void {
+export function registerAudioIpc({ ipcMain, dialog, settingsRepo }: ResolvedIpcHandlerDeps): void {
   registerTypedIpcHandler(ipcMain, 'saveExportFile', async (options) => {
     const current = settingsRepo.load()
     const paths = ensureWorkspaceDirectories(current.workspaceDir)

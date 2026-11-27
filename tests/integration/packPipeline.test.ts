@@ -34,7 +34,10 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
         description: 'Overrides only accent color'
       })
     )
-    writeFileSync(join(userThemeDir, 'tokens.json'), JSON.stringify({ '--accent-primary': '#22aa88' }))
+    writeFileSync(
+      join(userThemeDir, 'tokens.json'),
+      JSON.stringify({ '--accent-primary': '#22aa88' })
+    )
     writeFileSync(join(userThemeDir, 'override.css'), 'body { letter-spacing: 0.01em; }')
 
     // Create a user custom sound pack in sounds/

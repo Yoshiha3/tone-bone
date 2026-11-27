@@ -2,8 +2,8 @@
 
 Tone Bone は **見た目（テーマパック）** と **音色（音源パック）** を独立したフォルダで管理し、Minecraft のリソースパックのように **フォルダを追加するだけで差し替え・重ね合わせ** できます。
 
-* 標準同梱パック（`Minimal Light` / `Minimal Dark` / `Default Electronic Kit`）はアプリ本体側に格納されており、ユーザー用フォルダ（`themes/`・`sounds/`）には表示されません（初期状態では空です）。
-* テーマを切り替えても音源には影響せず、標準ベース音源（`default-sounds`）は常に最下層で有効なため、曲の音色が欠損する心配がありません。
+- 標準同梱パック（`Minimal Light` / `Minimal Dark` / `Default Electronic Kit`）はアプリ本体側に格納されており、ユーザー用フォルダ（`themes/`・`sounds/`）には表示されません（初期状態では空です）。
+- テーマを切り替えても音源には影響せず、標準ベース音源（`default-sounds`）は常に最下層で有効なため、曲の音色が欠損する心配がありません。
 
 ---
 
@@ -14,6 +14,7 @@ Tone Bone は **見た目（テーマパック）** と **音色（音源パッ�
 3. アプリに戻り **「再読み込み」** をクリックして、トグルスイッチを ON にします。
 
 ### 優先順位（重ね合わせルール）
+
 - 各タブの **「有効なパック（上が優先）」** リストで、**上にあるパックほど優先して下位のパックを部分上書き** します。
 - ドラッグ＆ドロップでいつでも優先順を並べ替えられます（音源パックの標準ベース `Default Electronic Kit` は常に最下層に固定されます）。
 - 変更したいファイルやトークンだけを書けば、未指定の項目は下位のパックや既定値がそのまま引き継がれます。
@@ -51,25 +52,26 @@ themes/my-pastel-theme/
 
 ### 2. `tokens.json`（任意・部分上書き可能）
 
-| トークン名 | 用途 |
-| :--- | :--- |
-| `--bg-app` | アプリ全体の背景色 |
-| `--bg-surface` | ヘッダー・サイドバー・モーダル等のパネル背景色 |
-| `--bg-surface-alt` | 選択カードや入力ボックス等の補助背景色 |
-| `--bg-hover` | ボタンホバー時の背景色 |
-| `--border-subtle` / `--border-strong` | 枠線（弱 / 強） |
-| `--text-primary` / `--text-secondary` / `--text-muted` | 文字色（主 / 副 / 控えめ） |
-| `--accent-primary` / `--accent-primary-hover` / `--accent-contrast` | アクセントカラーと上に載る文字色 |
-| `--danger` / `--solo-active` / `--mute-active` | 削除・Solo・Mute の状態色 |
-| `--grid-bg` / `--grid-row-alt` | ピアノロールの白鍵行 / 黒鍵行の背景色 |
-| `--grid-line-bar` / `--grid-line-beat` / `--grid-line-sub` | 小節線 / 拍線 / 細分化グリッド線 |
-| `--playhead` | 再生ヘッドの色 |
-| `--selection-fill` / `--selection-border` | 範囲選択ボックスの塗り・枠線 |
-| `--track-color-0` 〜 `--track-color-5` | トラック別カラーパレット（6色） |
-| `--radius-sm` / `--radius-md` | 角丸サイズ |
-| `--font-ui` / `--font-mono` | UI フォント / 等幅フォント |
+| トークン名                                                          | 用途                                           |
+| :------------------------------------------------------------------ | :--------------------------------------------- |
+| `--bg-app`                                                          | アプリ全体の背景色                             |
+| `--bg-surface`                                                      | ヘッダー・サイドバー・モーダル等のパネル背景色 |
+| `--bg-surface-alt`                                                  | 選択カードや入力ボックス等の補助背景色         |
+| `--bg-hover`                                                        | ボタンホバー時の背景色                         |
+| `--border-subtle` / `--border-strong`                               | 枠線（弱 / 強）                                |
+| `--text-primary` / `--text-secondary` / `--text-muted`              | 文字色（主 / 副 / 控えめ）                     |
+| `--accent-primary` / `--accent-primary-hover` / `--accent-contrast` | アクセントカラーと上に載る文字色               |
+| `--danger` / `--solo-active` / `--mute-active`                      | 削除・Solo・Mute の状態色                      |
+| `--grid-bg` / `--grid-row-alt`                                      | ピアノロールの白鍵行 / 黒鍵行の背景色          |
+| `--grid-line-bar` / `--grid-line-beat` / `--grid-line-sub`          | 小節線 / 拍線 / 細分化グリッド線               |
+| `--playhead`                                                        | 再生ヘッドの色                                 |
+| `--selection-fill` / `--selection-border`                           | 範囲選択ボックスの塗り・枠線                   |
+| `--track-color-0` 〜 `--track-color-5`                              | トラック別カラーパレット（6色）                |
+| `--radius-sm` / `--radius-md`                                       | 角丸サイズ                                     |
+| `--font-ui` / `--font-mono`                                         | UI フォント / 等幅フォント                     |
 
 例（アクセント色だけ差し替える最小テーマパック）：
+
 ```json
 {
   "--accent-primary": "#2f8f7b",

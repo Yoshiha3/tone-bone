@@ -89,7 +89,7 @@ export class SimpleJsonV1Codec implements ProjectCodec {
       loopEnabled: project.loopEnabled,
       tracks: project.tracks
     }
-    return JSON.stringify(payload, null, 2) + '\n'
+    return `${JSON.stringify(payload, null, 2)}\n`
   }
 
   decode(raw: string): Project {

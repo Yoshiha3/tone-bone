@@ -3,8 +3,7 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { _electron as electron, expect, test } from '@playwright/test'
 
-const ARTIFACT_DIR =
-  process.env.TONEBONE_SCREENSHOT_DIR || resolve(__dirname, '../../test-results')
+const ARTIFACT_DIR = process.env.TONEBONE_SCREENSHOT_DIR || resolve(__dirname, '../../test-results')
 
 test.describe('Tone Bone Electron E2E', () => {
   test('manages projects on Home screen, edits tracks/triplets/notes, switches Stage Mode, and swaps Resource Packs', async () => {
@@ -162,7 +161,10 @@ test.describe('Tone Bone Electron E2E', () => {
       await win.waitForSelector('[data-testid="settings-modal"]')
 
       await win.getByTestId('tab-editor').click()
-      await expect(win.getByTestId('note-len-last-used-btn')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('note-len-last-used-btn')).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
       await expect(win.getByTestId('save-mode-auto-btn')).toHaveAttribute('aria-checked', 'true')
       await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-editor.png') })
       await win.getByTestId('save-mode-manual-btn').click()
@@ -175,17 +177,32 @@ test.describe('Tone Bone Electron E2E', () => {
       expect(wsPath).toBe(tempWorkspace)
 
       await win.getByTestId('tab-themes').click()
-      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute('aria-checked', 'true')
-      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'false')
+      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
+      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute(
+        'aria-checked',
+        'false'
+      )
       await win.getByTestId('theme-toggle-minimal-dark').click()
       await win.getByTestId('theme-toggle-minimal-light').click()
       await win.waitForTimeout(200)
-      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute('aria-checked', 'true')
-      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute('aria-checked', 'false')
+      await expect(win.getByTestId('theme-toggle-minimal-dark')).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
+      await expect(win.getByTestId('theme-toggle-minimal-light')).toHaveAttribute(
+        'aria-checked',
+        'false'
+      )
       await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-themes.png') })
 
       await win.getByTestId('tab-sounds').click()
-      await expect(win.getByTestId('sound-toggle-default-sounds')).toHaveAttribute('aria-checked', 'true')
+      await expect(win.getByTestId('sound-toggle-default-sounds')).toHaveAttribute(
+        'aria-checked',
+        'true'
+      )
       await expect(win.getByTestId('sound-toggle-default-sounds')).toBeDisabled()
       await win.screenshot({ path: join(ARTIFACT_DIR, 'settings-sounds.png') })
 

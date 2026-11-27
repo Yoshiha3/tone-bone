@@ -1,4 +1,4 @@
-import { useEffect, useRef, type MouseEvent, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, type MouseEvent, type RefObject } from 'react'
 import type { GridDivision, NoteLengthMode, Track } from '@core/types'
 import { audioEngine } from '../../audioContext'
 import { projectStore, useProjectStore } from '../../store/useProjectStore'
@@ -124,7 +124,7 @@ export function usePianoRollInteraction({
     }
   }
 
-  const stopActiveDragTracking = (): void => {
+  const stopActiveDragTracking = useCallback((): void => {
     isDraggingRef.current = false
     pointerClientRef.current = null
     if (autoScrollRafRef.current !== null) {
@@ -135,7 +135,7 @@ export function usePianoRollInteraction({
       cleanupDragListenersRef.current()
       cleanupDragListenersRef.current = null
     }
-  }
+  }, [])
 
   const finishDrag = (): void => {
     stopActiveDragTracking()
@@ -216,7 +216,7 @@ export function usePianoRollInteraction({
     return () => {
       stopActiveDragTracking()
     }
-  }, [])
+  }, [stopActiveDragTracking])
 
   const onMouseDown = (e: MouseEvent<HTMLCanvasElement>): void => {
     if (!track) return

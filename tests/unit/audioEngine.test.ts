@@ -127,9 +127,7 @@ function createSampleProject(loopEnabled = true): Project {
         volume: 0.8,
         muted: false,
         solo: false,
-        notes: [
-          { id: 'n1', pitch: 60, startTick: 0, durationTick: PPQN, velocity: 0.8 }
-        ]
+        notes: [{ id: 'n1', pitch: 60, startTick: 0, durationTick: PPQN, velocity: 0.8 }]
       },
       {
         id: 't-drum',
@@ -140,9 +138,7 @@ function createSampleProject(loopEnabled = true): Project {
         volume: 0.9,
         muted: false,
         solo: false,
-        notes: [
-          { id: 'd1', pitch: 0, startTick: 0, durationTick: 120, velocity: 0.9 }
-        ]
+        notes: [{ id: 'd1', pitch: 0, startTick: 0, durationTick: 120, velocity: 0.9 }]
       }
     ]
   }
@@ -224,7 +220,9 @@ describe('SynthVoice & DrumVoice', () => {
 
     // Noise buffer should be created only once and reused across snare/hihats/clap/cymbal
     expect(ctx.createBuffer).toHaveBeenCalledTimes(1)
-    expect(ctx.createBuffer.mock.calls[0][1]).toBeGreaterThanOrEqual(Math.floor(ctx.sampleRate * 2.0))
+    expect(ctx.createBuffer.mock.calls[0][1]).toBeGreaterThanOrEqual(
+      Math.floor(ctx.sampleRate * 2.0)
+    )
     expect(ctx._oscillators.length).toBeGreaterThanOrEqual(12)
     expect(ctx._bufferSources.length).toBeGreaterThanOrEqual(8)
 

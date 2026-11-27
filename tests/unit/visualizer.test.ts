@@ -5,7 +5,10 @@ import { DRUM_LANES } from '@core/types'
 import { FALLBACK_VISUALIZER_PRESET } from '@packs/packMerger'
 import { drawRoundedRect, pitchToVisualYRatio } from '@visualizers/canvasUtils'
 import { MinimalFlowRenderer } from '@visualizers/MinimalFlowRenderer'
-import { createDefaultVisualizerRegistry, VisualizerRegistry } from '@visualizers/VisualizerRegistry'
+import {
+  createDefaultVisualizerRegistry,
+  VisualizerRegistry
+} from '@visualizers/VisualizerRegistry'
 import type { VisualizerRenderer } from '@visualizers/types'
 
 function createMockCanvas2DContext() {

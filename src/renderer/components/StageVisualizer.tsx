@@ -24,6 +24,7 @@ export function StageVisualizer() {
   const paletteRef = useRef<string[]>(readTrackPalette())
 
   // Cache track colors whenever active theme packs change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeThemePackIds triggers reading updated CSS custom properties
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       paletteRef.current = readTrackPalette()
@@ -103,7 +104,7 @@ export function StageVisualizer() {
 
     rafId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafId)
-  }, [project, preset, activeThemePackIds])
+  }, [project, preset])
 
   return (
     <div className={styles.stage} data-testid="stage-visualizer">
@@ -122,11 +123,7 @@ export function StageVisualizer() {
           >
             {isPlaying ? '一時停止' : '再生'}
           </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('edit')}
-            data-testid="exit-stage-btn"
-          >
+          <button type="button" onClick={() => setViewMode('edit')} data-testid="exit-stage-btn">
             編集に戻る
           </button>
         </div>

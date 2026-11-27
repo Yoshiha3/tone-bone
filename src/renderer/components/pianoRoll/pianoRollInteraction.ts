@@ -217,10 +217,7 @@ export function handlePianoRollPointerMove(
       anchor + step,
       snapTick(contentXToTick(contentX, metrics), gridDivision)
     )
-    const clampedDuration = Math.max(
-      step,
-      Math.min(metrics.totalTicks - anchor, endTick - anchor)
-    )
+    const clampedDuration = Math.max(step, Math.min(metrics.totalTicks - anchor, endTick - anchor))
     const latestNotes = env.getLatestTrackNotes(track.id)
     if (latestNotes) {
       session.previewNotes = latestNotes.map((n) =>

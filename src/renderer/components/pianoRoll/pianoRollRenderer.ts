@@ -1,5 +1,13 @@
 import { getGridTickStep, isBlackKey, midiToNoteName } from '@core/musicMath'
-import { DRUM_LANES, PPQN, TICKS_PER_BAR, type GridDivision, type Note, type Project, type Track } from '@core/types'
+import {
+  DRUM_LANES,
+  PPQN,
+  TICKS_PER_BAR,
+  type GridDivision,
+  type Note,
+  type Project,
+  type Track
+} from '@core/types'
 import { drawRoundedRect } from '@visualizers/canvasUtils'
 import type { ThemeTokens } from '../../themeTokens'
 import {

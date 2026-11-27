@@ -32,21 +32,22 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
 
 ## キーボードショートカット
 
-| 操作 | macOS | Windows / Linux |
-| :--- | :--- | :--- |
-| 再生 / 一時停止 | `Space` | `Space` |
-| 元に戻す (Undo) | `Cmd + Z` | `Ctrl + Z` |
-| やり直し (Redo) | `Cmd + Shift + Z` | `Ctrl + Shift + Z` |
-| 選択ノーツをコピー | `Cmd + C` | `Ctrl + C` |
-| ペースト（再生位置へ） | `Cmd + V` | `Ctrl + V` |
-| 選択ノーツを削除 | `Delete` / `Backspace` | `Delete` / `Backspace` |
-| 上書き保存 | `Cmd + S` | `Ctrl + S` |
-| 名前を付けて保存 | `Cmd + Shift + S`（または `Shift + 保存クリック`） | `Ctrl + Shift + S`（または `Shift + 保存クリック`） |
-| 新規プロジェクト作成 | `Cmd + N` | `Ctrl + N` |
-| 選択プロジェクトを開く（ホーム画面） | `Enter` | `Enter` |
-| Stage Mode 終了 / 設定を閉じる | `Esc` | `Esc` |
+| 操作                                 | macOS                                              | Windows / Linux                                     |
+| :----------------------------------- | :------------------------------------------------- | :-------------------------------------------------- |
+| 再生 / 一時停止                      | `Space`                                            | `Space`                                             |
+| 元に戻す (Undo)                      | `Cmd + Z`                                          | `Ctrl + Z`                                          |
+| やり直し (Redo)                      | `Cmd + Shift + Z`                                  | `Ctrl + Shift + Z`                                  |
+| 選択ノーツをコピー                   | `Cmd + C`                                          | `Ctrl + C`                                          |
+| ペースト（再生位置へ）               | `Cmd + V`                                          | `Ctrl + V`                                          |
+| 選択ノーツを削除                     | `Delete` / `Backspace`                             | `Delete` / `Backspace`                              |
+| 上書き保存                           | `Cmd + S`                                          | `Ctrl + S`                                          |
+| 名前を付けて保存                     | `Cmd + Shift + S`（または `Shift + 保存クリック`） | `Ctrl + Shift + S`（または `Shift + 保存クリック`） |
+| 新規プロジェクト作成                 | `Cmd + N`                                          | `Ctrl + N`                                          |
+| 選択プロジェクトを開く（ホーム画面） | `Enter`                                            | `Enter`                                             |
+| Stage Mode 終了 / 設定を閉じる       | `Esc`                                              | `Esc`                                               |
 
 ### ピアノロール操作
+
 - **左クリック**：ノーツ配置（Synth トラックでは右方向の別グリッドへ `8px` 以上ドラッグで長さ調節）
 - **ノーツ本体ドラッグ**：移動（複数選択時はまとめて移動）
 - **ノーツ右端ドラッグ**：長さ伸縮（Synth トラックのみ）
@@ -61,20 +62,23 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
 
 [GitHub Releases](https://github.com/Yoshiha3/tone-bone/releases) からお使いの OS 向けバイナリをダウンロードできます。
 
-| OS | ファイル |
-| :--- | :--- |
-| macOS (Apple Silicon) | `Tone-Bone-<version>-mac-arm64.dmg` |
-| macOS (Intel) | `Tone-Bone-<version>-mac-x64.dmg` |
+| OS                                    | ファイル                                                                             |
+| :------------------------------------ | :----------------------------------------------------------------------------------- |
+| macOS (Apple Silicon)                 | `Tone-Bone-<version>-mac-arm64.dmg`                                                  |
+| macOS (Intel)                         | `Tone-Bone-<version>-mac-x64.dmg`                                                    |
 | Windows (インストーラー / ポータブル) | `Tone-Bone-<version>-win-x64-setup.exe` / `Tone-Bone-<version>-win-x64-portable.exe` |
-| Linux (AppImage) | `Tone-Bone-<version>-linux-x64.AppImage` |
+| Linux (AppImage)                      | `Tone-Bone-<version>-linux-x64.AppImage`                                             |
 
 ### 初回起動時の注意（未署名バイナリ）
+
 - **macOS**: Gatekeeper により「開発元が未確認」または「壊れているため開けません」と表示される場合は、`/Applications` にドラッグ＆ドロップした後、ターミナルで以下を実行してから起動してください。
+
   ```bash
   xattr -cr "/Applications/Tone Bone.app"
   ```
 - **Windows**: SmartScreen の警告画面が表示された場合は「詳細情報」→「実行」を選択してください。
 - **Linux**: 実行権限を付与して起動してください。
+
   ```bash
   chmod +x Tone-Bone-*.AppImage
   ./Tone-Bone-*.AppImage
@@ -85,6 +89,7 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
 ## 開発・テスト・アプリ化
 
 ### 必要環境
+
 - Node.js 20 以上（macOS / Windows / Linux 対応）
 
 ### セットアップと起動

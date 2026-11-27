@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { canRedo, canUndo, createHistory, pushHistory, redoHistory, undoHistory } from '@core/history'
+import {
+  canRedo,
+  canUndo,
+  createHistory,
+  pushHistory,
+  redoHistory,
+  undoHistory
+} from '@core/history'
 
 describe('history', () => {
   it('supports push, undo, redo, and clears future on new push', () => {

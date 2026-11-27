@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CodecRegistry, createDefaultCodecRegistry } from '@codecs/CodecRegistry'
+import { type CodecRegistry, createDefaultCodecRegistry } from '@codecs/CodecRegistry'
 import { SimpleJsonV1Codec } from '@codecs/SimpleJsonV1Codec'
 import type { ProjectCodec } from '@codecs/types'
 import { createDemoProject } from '@core/demoProject'

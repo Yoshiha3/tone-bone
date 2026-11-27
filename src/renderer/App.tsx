@@ -10,11 +10,7 @@ import { TrackList } from './components/TrackList'
 import { TransportBar } from './components/TransportBar'
 import { UnsavedChangesModal } from './components/UnsavedChangesModal'
 import { dispatchKeyboardShortcut } from './shortcuts'
-import {
-  defaultSaveStrategyRegistry,
-  projectStore,
-  useProjectStore
-} from './store/useProjectStore'
+import { defaultSaveStrategyRegistry, projectStore, useProjectStore } from './store/useProjectStore'
 import styles from './App.module.css'
 
 export function App() {

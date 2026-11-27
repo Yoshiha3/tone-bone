@@ -3,6 +3,7 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import type { WorkspaceFolderTarget } from '@core/types'
 
 const WINDOWS_RESERVED_NAME_RE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i
+// biome-ignore lint/suspicious/noControlCharactersInRegex: strip ASCII control characters from filenames
 const CONTROL_CHARS_RE = /[\x00-\x1f\x7f]/g
 const INVALID_FILENAME_CHARS_RE = /[\\/:*?"<>|]/g
 
@@ -16,8 +17,7 @@ export const WORKSPACE_FOLDER_TARGETS: readonly WorkspaceFolderTarget[] = [
 
 export function isWorkspaceFolderTarget(target: unknown): target is WorkspaceFolderTarget {
   return (
-    typeof target === 'string' &&
-    (WORKSPACE_FOLDER_TARGETS as readonly string[]).includes(target)
+    typeof target === 'string' && (WORKSPACE_FOLDER_TARGETS as readonly string[]).includes(target)
   )
 }
 

@@ -64,6 +64,7 @@ export function PianoRoll() {
   })
 
   // Apply anchored horizontal scroll immediately after zoom layout updates
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-apply pending scroll offset whenever horizontal zoom changes
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el || pendingScrollLeftRef.current === null) return
@@ -79,7 +80,9 @@ export function PianoRoll() {
     const updateSize = (): void => {
       const w = Math.max(1, el.clientWidth)
       const h = Math.max(1, el.clientHeight)
-      setViewport((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }))
+      setViewport((prev) =>
+        prev.width === w && prev.height === h ? prev : { width: w, height: h }
+      )
     }
     updateSize()
     const observer = new ResizeObserver(updateSize)
@@ -125,6 +128,7 @@ export function PianoRoll() {
   }, [setPxPerBeat])
 
   // Refresh cached CSS theme tokens only when active theme packs change
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeThemePackIds triggers reading updated CSS custom properties
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
       themeRef.current = readThemeTokens()
@@ -133,6 +137,7 @@ export function PianoRoll() {
   }, [activeThemePackIds])
 
   // Restore saved scroll position, or center synth scroll around C4 on first visit to a track
+  // biome-ignore lint/correctness/useExhaustiveDependencies: restore or initialize scroll position when switching track or project
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
@@ -196,16 +201,7 @@ export function PianoRoll() {
 
     rafId = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafId)
-  }, [
-    project,
-    track,
-    selectedNoteIds,
-    gridDivision,
-    activeThemePackIds,
-    viewport,
-    metrics,
-    interaction.sessionRef
-  ])
+  }, [project, track, selectedNoteIds, gridDivision, viewport, metrics, interaction.sessionRef])
 
   const zoomByStep = (delta: number): void => {
     const newPxPerBeat = clampPxPerBeat(pxPerBeat + delta)
@@ -274,8 +270,8 @@ export function PianoRoll() {
         </div>
 
         <span className={styles.hint}>
-          クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 / Cmd+A・↑↓: 移調 /
-          Cmd+C・V: コピペ
+          クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 / Cmd+A・↑↓: 移調 / Cmd+C・V:
+          コピペ
         </span>
 
         <div className={styles.footerGroup}>

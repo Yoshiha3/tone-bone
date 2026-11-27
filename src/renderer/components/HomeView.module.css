@@ -160,7 +160,10 @@
   flex-direction: column;
   gap: 10px;
   cursor: pointer;
-  transition: border-color 0.12s ease, background-color 0.12s ease, box-shadow 0.12s ease;
+  transition:
+    border-color 0.12s ease,
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .card:hover {

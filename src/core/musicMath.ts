@@ -40,7 +40,7 @@ export function secondsToTicks(seconds: number, bpm: number): number {
 }
 
 export function midiToFrequency(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12)
+  return 440 * 2 ** ((midi - 69) / 12)
 }
 
 export function midiToNoteName(midi: number): string {
@@ -116,7 +116,11 @@ export function moveNotes(
 
   return notes.map((note) => {
     if (!selectedIds.has(note.id)) return note
-    const nextStart = clamp(note.startTick + effectiveDeltaTick, 0, maxTotalTicks - note.durationTick)
+    const nextStart = clamp(
+      note.startTick + effectiveDeltaTick,
+      0,
+      maxTotalTicks - note.durationTick
+    )
     const nextPitch = clamp(note.pitch + effectiveDeltaPitch, minPitch, maxPitch)
     return {
       ...note,

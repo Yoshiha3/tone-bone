@@ -87,11 +87,7 @@ export function HomeView() {
           >
             外部ファイルを開く
           </button>
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            data-testid="settings-btn"
-          >
+          <button type="button" onClick={() => setSettingsOpen(true)} data-testid="settings-btn">
             設定
           </button>
         </div>
@@ -120,10 +116,7 @@ export function HomeView() {
               >
                 デモ曲を追加
               </button>
-              <button
-                type="button"
-                onClick={() => void requestOpenExternalProject()}
-              >
+              <button type="button" onClick={() => void requestOpenExternalProject()}>
                 外部ファイルを開く
               </button>
             </div>

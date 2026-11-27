@@ -31,9 +31,7 @@ export function collectScheduledNotes(
 
   const audibleIds = getAudibleTrackIds(project.tracks)
   const firstLoop = Math.max(0, Math.floor(windowStartAbs / totalTicks))
-  const lastLoop = project.loopEnabled
-    ? Math.floor((effectiveEnd - 1e-9) / totalTicks)
-    : 0
+  const lastLoop = project.loopEnabled ? Math.floor((effectiveEnd - 1e-9) / totalTicks) : 0
 
   const results: ScheduledNoteItem[] = []
 

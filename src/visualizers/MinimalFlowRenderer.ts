@@ -106,7 +106,7 @@ export class MinimalFlowRenderer implements VisualizerRenderer {
     for (const ripple of ripples) {
       const age = (nowMs - ripple.createdAtMs) / 700
       if (age < 0 || age >= 1) continue
-      const eased = 1 - Math.pow(1 - age, 3)
+      const eased = 1 - (1 - age) ** 3
       const radius = (10 + eased * 44 * preset.rippleScale) * ripple.strength
       ctx.save()
       ctx.strokeStyle = ripple.color

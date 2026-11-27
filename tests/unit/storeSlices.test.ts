@@ -127,7 +127,10 @@ describe('Store Slices: settingsSlice', () => {
   it('reloads theme/sound packs, opens folders, and switches workspace directory', async () => {
     const platform = new MemoryPlatformAdapter(
       [createSampleThemePack('minimal-light', '#fff'), createSampleThemePack('sunset', '#ffeedd')],
-      [createSampleSoundPack('default-sounds', 'soft-sine'), createSampleSoundPack('extra', 'warm-pad')]
+      [
+        createSampleSoundPack('default-sounds', 'soft-sine'),
+        createSampleSoundPack('extra', 'warm-pad')
+      ]
     )
     const openFolderSpy = vi.spyOn(platform, 'openFolder')
     const onThemeChanged = vi.fn()
@@ -288,7 +291,10 @@ describe('Store Slices: projectSlice', () => {
     store.getState().setSelectedNoteIds([synthNote.id])
     store.getState().deleteSelectedNotes()
     expect(
-      store.getState().project.tracks.find((t) => t.id === synthTrack.id)!.notes.some((n) => n.id === synthNote.id)
+      store
+        .getState()
+        .project.tracks.find((t) => t.id === synthTrack.id)!
+        .notes.some((n) => n.id === synthNote.id)
     ).toBe(false)
 
     // Empty clipboard paste and empty selection copy/delete are safe no-ops

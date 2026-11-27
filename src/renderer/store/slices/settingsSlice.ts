@@ -1,8 +1,4 @@
-import {
-  DEFAULT_SOUND_PACK_ID,
-  DEFAULT_THEME_PACK_ID,
-  type AppSettings
-} from '@core/types'
+import { DEFAULT_SOUND_PACK_ID, DEFAULT_THEME_PACK_ID, type AppSettings } from '@core/types'
 import { mergeSoundPacks, mergeThemePacks } from '@packs/packMerger'
 import { INITIAL_MERGED_SOUNDS, INITIAL_MERGED_THEME } from '../helpers'
 import type { SettingsSlice, SliceRuntime, StoreGet, StoreSet } from '../types'

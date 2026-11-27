@@ -113,10 +113,7 @@ describe('musicMath', () => {
     })
 
     // No solo: all non-muted tracks play
-    const normal = getAudibleTrackIds([
-      baseTrack('t1', false, false),
-      baseTrack('t2', true, false)
-    ])
+    const normal = getAudibleTrackIds([baseTrack('t1', false, false), baseTrack('t2', true, false)])
     expect([...normal]).toEqual(['t1'])
 
     // With solo: only solo & non-muted tracks play

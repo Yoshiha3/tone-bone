@@ -16,7 +16,9 @@ describe('Electron Security Helpers', () => {
     expect(isAllowedRendererUrl(rendererFileUrl, rendererPath)).toBe(true)
     expect(isAllowedRendererUrl(`${rendererFileUrl}?view=edit#top`, rendererPath)).toBe(true)
 
-    expect(isAllowedRendererUrl(pathToFileURL(resolve('/app/out/other.html')).href, rendererPath)).toBe(false)
+    expect(
+      isAllowedRendererUrl(pathToFileURL(resolve('/app/out/other.html')).href, rendererPath)
+    ).toBe(false)
     expect(isAllowedRendererUrl('https://example.com/', rendererPath)).toBe(false)
     expect(isAllowedRendererUrl('javascript:alert(1)', rendererPath)).toBe(false)
     expect(isAllowedRendererUrl('', rendererPath)).toBe(false)
@@ -25,7 +27,9 @@ describe('Electron Security Helpers', () => {
   it('allows only matching dev server origin in dev mode', () => {
     const devUrl = 'http://localhost:5173'
     expect(isAllowedRendererUrl('http://localhost:5173/', rendererPath, devUrl)).toBe(true)
-    expect(isAllowedRendererUrl('http://localhost:5173/index.html?x=1', rendererPath, devUrl)).toBe(true)
+    expect(isAllowedRendererUrl('http://localhost:5173/index.html?x=1', rendererPath, devUrl)).toBe(
+      true
+    )
 
     expect(isAllowedRendererUrl('http://localhost:5174/', rendererPath, devUrl)).toBe(false)
     expect(isAllowedRendererUrl('https://evil.example/', rendererPath, devUrl)).toBe(false)

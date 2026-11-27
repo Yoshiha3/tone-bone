@@ -31,7 +31,7 @@ function readFirstText(paths: readonly string[]): string {
     try {
       return readFileSync(p, 'utf-8')
     } catch {
-      continue
+      // Skip unreadable file and try next candidate
     }
   }
   return ''

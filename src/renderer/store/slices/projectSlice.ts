@@ -108,9 +108,7 @@ export function createProjectSlice(
       const track = get().project.tracks.find((t) => t.id === trackId)
       commit((p) => ({
         ...p,
-        tracks: p.tracks.map((t) =>
-          t.id === trackId ? { ...t, notes: [...t.notes, note] } : t
-        )
+        tracks: p.tracks.map((t) => (t.id === trackId ? { ...t, notes: [...t.notes, note] } : t))
       }))
       if (track && getTrackTypeSpec(track.type).remembersLastNoteDuration) {
         set({ lastNoteDurationTick: Math.max(30, Math.round(note.durationTick)) })
@@ -154,9 +152,7 @@ export function createProjectSlice(
       commit((p) => ({
         ...p,
         tracks: p.tracks.map((t) =>
-          t.id === selectedTrackId
-            ? { ...t, notes: t.notes.filter((n) => !idSet.has(n.id)) }
-            : t
+          t.id === selectedTrackId ? { ...t, notes: t.notes.filter((n) => !idSet.has(n.id)) } : t
         )
       }))
       set({ selectedNoteIds: [] })
@@ -194,7 +190,9 @@ export function createProjectSlice(
       }))
 
       const anchorId = selectedNoteIds[0]
-      return nextNotes.find((n) => n.id === anchorId) ?? nextNotes.find((n) => idSet.has(n.id)) ?? null
+      return (
+        nextNotes.find((n) => n.id === anchorId) ?? nextNotes.find((n) => idSet.has(n.id)) ?? null
+      )
     },
 
     copySelectedNotes: () => {

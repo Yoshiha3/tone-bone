@@ -49,10 +49,10 @@ describe('dispatchKeyboardShortcut', () => {
         resolve: vi.fn()
       }
     })
-    const res1 = dispatchKeyboardShortcut(
-      keyEvent({ key: 'Escape', isTextInput: true }),
-      { state: store.getState(), actions }
-    )
+    const res1 = dispatchKeyboardShortcut(keyEvent({ key: 'Escape', isTextInput: true }), {
+      state: store.getState(),
+      actions
+    })
     expect(res1).toEqual({
       matched: true,
       preventDefault: false,
@@ -77,18 +77,18 @@ describe('dispatchKeyboardShortcut', () => {
     store.setState({ viewMode: 'edit' })
 
     expect(
-      dispatchKeyboardShortcut(
-        keyEvent({ code: 'Space', key: ' ', isTextInput: true }),
-        { state: store.getState(), actions }
-      ).matched
+      dispatchKeyboardShortcut(keyEvent({ code: 'Space', key: ' ', isTextInput: true }), {
+        state: store.getState(),
+        actions
+      }).matched
     ).toBe(false)
 
     store.setState({ settingsOpen: true })
     expect(
-      dispatchKeyboardShortcut(
-        keyEvent({ code: 'Space', key: ' ' }),
-        { state: store.getState(), actions }
-      ).matched
+      dispatchKeyboardShortcut(keyEvent({ code: 'Space', key: ' ' }), {
+        state: store.getState(),
+        actions
+      }).matched
     ).toBe(false)
     expect(actions.togglePlayPause).not.toHaveBeenCalled()
   })
@@ -236,10 +236,10 @@ describe('dispatchKeyboardShortcut', () => {
     )
 
     // Shift+ArrowDown shifts selected notes -12 semitones
-    const octDownRes = dispatchKeyboardShortcut(
-      keyEvent({ key: 'ArrowDown', shiftKey: true }),
-      { state: store.getState(), actions }
-    )
+    const octDownRes = dispatchKeyboardShortcut(keyEvent({ key: 'ArrowDown', shiftKey: true }), {
+      state: store.getState(),
+      actions
+    })
     expect(octDownRes.id).toBe('transpose-down-octave')
     expect(store.getState().project.tracks[0].notes[0].pitch).toBe(firstNoteOrigPitch - 11)
     expect(actions.previewNote).toHaveBeenLastCalledWith(

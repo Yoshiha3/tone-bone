@@ -28,9 +28,5 @@ export interface VisualizerFrameState {
 export interface VisualizerRenderer {
   readonly id: string
   readonly name: string
-  render(
-    ctx: CanvasRenderingContext2D,
-    frame: VisualizerFrameState,
-    preset: VisualizerPreset
-  ): void
+  render(ctx: CanvasRenderingContext2D, frame: VisualizerFrameState, preset: VisualizerPreset): void
 }

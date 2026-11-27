@@ -39,7 +39,9 @@ describe('Path Security Helpers', () => {
 
     // Directory itself, traversal, null byte, and sibling prefix lookalikes must be rejected
     expect(isPathInsideDirectory(projectsDir, projectsDir)).toBe(false)
-    expect(isPathInsideDirectory(projectsDir, join(projectsDir, '..', 'outside', 'secret.json'))).toBe(false)
+    expect(
+      isPathInsideDirectory(projectsDir, join(projectsDir, '..', 'outside', 'secret.json'))
+    ).toBe(false)
     expect(isPathInsideDirectory(projectsDir, join(root, 'projects-evil', 'song.json'))).toBe(false)
     expect(isPathInsideDirectory(projectsDir, `${insideFile}\0.json`)).toBe(false)
 

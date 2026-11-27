@@ -1,6 +1,13 @@
 import { PPQN, TICKS_PER_BAR, type Note, type Project } from './types'
 
-function n(id: string, pitch: number, bar: number, beatOffset: number, durationBeats: number, velocity = 0.8): Note {
+function n(
+  id: string,
+  pitch: number,
+  bar: number,
+  beatOffset: number,
+  durationBeats: number,
+  velocity = 0.8
+): Note {
   return {
     id,
     pitch,
