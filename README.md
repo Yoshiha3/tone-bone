@@ -4,6 +4,8 @@
 
 Tone Bone は、直感的なピアノロール打ち込みと静かで美しい再生演出（Stage Mode）、そして **Minecraft のリソースパックのようにテーマや音源を後からフォルダ追加だけで差し替え・重ね合わせできる拡張設計** を備えたデスクトップ DAW です。
 
+![Tone Bone 編集画面](docs/images/tone-bone-demo.png)
+
 ---
 
 ## 主な特徴
