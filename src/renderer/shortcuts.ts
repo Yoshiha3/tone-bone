@@ -11,6 +11,27 @@ export interface ShortcutKeyEvent {
   isTextInput: boolean
 }
 
+export interface ComposingKeyEventLike {
+  readonly isComposing?: boolean
+  readonly nativeEvent?: { readonly isComposing?: boolean; readonly keyCode?: number }
+  readonly keyCode?: number
+  readonly key?: string
+}
+
+/**
+ * Detects whether a keyboard event is part of an active IME composition
+ * (e.g. confirming Japanese kana-kanji conversion with Enter or canceling with Escape).
+ */
+export function isImeComposing(event: ComposingKeyEventLike): boolean {
+  return (
+    event.isComposing === true ||
+    event.nativeEvent?.isComposing === true ||
+    event.keyCode === 229 ||
+    event.nativeEvent?.keyCode === 229 ||
+    event.key === 'Process'
+  )
+}
+
 export interface ShortcutActions {
   togglePlayPause: () => void
   requestNewProject: () => Promise<boolean>

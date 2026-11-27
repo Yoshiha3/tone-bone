@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { requestNewProject, requestOpenExternalProject } from '../actions'
+import { isImeComposing } from '../shortcuts'
 import { useProjectStore } from '../store/useProjectStore'
 import styles from './HomeView.module.css'
 
@@ -167,6 +168,7 @@ export function HomeView() {
                           onChange={(e) => setDraftTitle(e.target.value)}
                           onBlur={() => void commitRename(item.filePath, item.title)}
                           onKeyDown={(e) => {
+                            if (isImeComposing(e)) return
                             if (e.key === 'Enter') {
                               e.stopPropagation()
                               void commitRename(item.filePath, item.title)

@@ -4,6 +4,7 @@ import { MemoryPlatformAdapter } from '@platform/MemoryPlatformAdapter'
 import {
   dispatchKeyboardShortcut,
   formatShortcut,
+  isImeComposing,
   isMacPlatform,
   type ShortcutKeyEvent
 } from '@renderer/shortcuts'
@@ -306,5 +307,16 @@ describe('formatShortcut', () => {
     expect(isMacPlatform('Mozilla/5.0 (Macintosh; Intel Mac OS X)')).toBe(true)
     expect(isMacPlatform('Win32')).toBe(false)
     expect(isMacPlatform('Linux x86_64')).toBe(false)
+  })
+})
+
+describe('isImeComposing', () => {
+  it('detects active IME composition across DOM and React synthetic keyboard events', () => {
+    expect(isImeComposing({ key: 'Enter', isComposing: true })).toBe(true)
+    expect(isImeComposing({ key: 'Enter', nativeEvent: { isComposing: true } })).toBe(true)
+    expect(isImeComposing({ key: 'Enter', keyCode: 229 })).toBe(true)
+    expect(isImeComposing({ key: 'Enter', nativeEvent: { keyCode: 229 } })).toBe(true)
+    expect(isImeComposing({ key: 'Process', isComposing: false })).toBe(true)
+    expect(isImeComposing({ key: 'Enter', isComposing: false, keyCode: 13 })).toBe(false)
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { clamp } from '@core/musicMath'
+import { isImeComposing } from '../shortcuts'
 
 export interface NumericInputProps {
   value: number
@@ -53,6 +54,7 @@ export function NumericInput({
       onChange={(e) => setText(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => {
+        if (isImeComposing(e)) return
         if (e.key === 'Enter') {
           commit()
           e.currentTarget.blur()

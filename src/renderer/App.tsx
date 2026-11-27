@@ -9,7 +9,7 @@ import { StageVisualizer } from './components/StageVisualizer'
 import { TrackList } from './components/TrackList'
 import { TransportBar } from './components/TransportBar'
 import { UnsavedChangesModal } from './components/UnsavedChangesModal'
-import { dispatchKeyboardShortcut } from './shortcuts'
+import { dispatchKeyboardShortcut, isImeComposing } from './shortcuts'
 import { defaultSaveStrategyRegistry, projectStore, useProjectStore } from './store/useProjectStore'
 import styles from './App.module.css'
 
@@ -52,6 +52,7 @@ export function App() {
   // Global keyboard shortcuts (declarative table in shortcuts.ts)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
+      if (isImeComposing(e)) return
       const target = e.target as HTMLElement | null
       const isTextInput =
         target?.tagName === 'INPUT' ||

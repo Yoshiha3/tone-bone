@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TRACK_TYPES } from '@core/trackTypes'
+import { isImeComposing } from '../shortcuts'
 import { useProjectStore } from '../store/useProjectStore'
 import styles from './TrackList.module.css'
 
@@ -144,9 +145,12 @@ export function TrackList() {
                     onChange={(e) => setDraftName(e.target.value)}
                     onBlur={() => commitRename(track.id)}
                     onKeyDown={(e) => {
+                      if (isImeComposing(e)) return
                       if (e.key === 'Enter') {
+                        e.stopPropagation()
                         commitRename(track.id)
                       } else if (e.key === 'Escape') {
+                        e.stopPropagation()
                         setEditingTrackId(null)
                       }
                     }}
