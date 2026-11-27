@@ -7,7 +7,7 @@ import {
   undoHistory
 } from '@core/history'
 import { clamp, cloneNotesForPaste, getNotesEndTick, moveNotes } from '@core/musicMath'
-import { getTrackTypeSpec } from '@core/trackTypes'
+import { canPasteNotesBetween, getTrackTypeSpec } from '@core/trackTypes'
 import { MAX_BARS, TICKS_PER_BAR, type Note, type Project, type Track } from '@core/types'
 import { createId } from '../helpers'
 import type { ProjectSlice, SliceRuntime, StoreGet, StoreSet } from '../types'
@@ -202,16 +202,33 @@ export function createProjectSlice(
       if (!track) return
       const idSet = new Set(selectedNoteIds)
       const copied = track.notes.filter((n) => idSet.has(n.id)).map((n) => ({ ...n }))
-      set({ clipboardNotes: copied, statusMessage: `${copied.length}個のノーツをコピーしました` })
+      set({
+        clipboardNotes: copied,
+        clipboardTrackType: track.type,
+        statusMessage: `${copied.length}個のノーツをコピーしました`
+      })
     },
 
     pasteNotes: (targetTick) => {
-      const { project, selectedTrackId, clipboardNotes } = get()
+      const { project, selectedTrackId, clipboardNotes, clipboardTrackType } = get()
       if (clipboardNotes.length === 0) return null
+      const targetTrack = project.tracks.find((t) => t.id === selectedTrackId)
+      if (!targetTrack) return null
+      if (
+        clipboardTrackType !== null &&
+        !canPasteNotesBetween(clipboardTrackType, targetTrack.type)
+      ) {
+        set({ statusMessage: '異なる種類のノーツはこのトラックにペーストできません' })
+        return null
+      }
+      const targetSpec = getTrackTypeSpec(targetTrack.type)
       const maxTicks = project.bars * TICKS_PER_BAR
       const pasted = cloneNotesForPaste(clipboardNotes, targetTick, maxTicks, () =>
         createId('note')
-      )
+      ).map((note) => ({
+        ...note,
+        pitch: clamp(note.pitch, targetSpec.minPitch, targetSpec.maxPitch)
+      }))
       const rawEndTick = getNotesEndTick(pasted)
       if (pasted.length === 0 || rawEndTick === null) return null
       commit((p) => ({

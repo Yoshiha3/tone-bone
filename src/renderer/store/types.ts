@@ -40,6 +40,7 @@ export interface UiSlice {
   selectedTrackId: string
   selectedNoteIds: string[]
   clipboardNotes: Note[]
+  clipboardTrackType: TrackType | null
   gridDivision: GridDivision
   pxPerBeat: number
   pianoRollToolMode: PianoRollToolMode

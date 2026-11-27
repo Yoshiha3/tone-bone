@@ -12,6 +12,7 @@ export function createUiSlice(
     selectedTrackId: initialSelectedTrackId,
     selectedNoteIds: [],
     clipboardNotes: [],
+    clipboardTrackType: null,
     gridDivision: '1/16',
     pxPerBeat: DEFAULT_PX_PER_BEAT,
     pianoRollToolMode: 'draw',

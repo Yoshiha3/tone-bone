@@ -428,6 +428,7 @@ describe('Store Slices: workspaceSlice error handling & fallbacks', () => {
     expect(loadedEmpty.selectedTrackId).toBe('')
     expect(loadedEmpty.selectedNoteIds).toEqual([])
     expect(loadedEmpty.clipboardNotes).toEqual([])
+    expect(loadedEmpty.clipboardTrackType).toBeNull()
     expect(loadedEmpty.pianoRollScroll).toEqual({ left: 0, top: null })
     expect(loadedEmpty.currentFilePath).toBeNull()
     expect(loadedEmpty.isDirty).toBe(false)
@@ -455,5 +456,55 @@ describe('Store Slices: workspaceSlice error handling & fallbacks', () => {
 
     expect(formatError(new Error('Disk full'))).toBe('Disk full')
     expect(formatError('plain string error')).toBe('plain string error')
+  })
+
+  it('blocks pasting notes across incompatible pitch domains and allows pasting within the same domain', () => {
+    const store = createProjectStore({
+      platform: new MemoryPlatformAdapter(),
+      codecs: createDefaultCodecRegistry()
+    })
+
+    const synthTrack = store.getState().project.tracks.find((t) => t.type === 'synth')!
+    const drumTrack = store.getState().project.tracks.find((t) => t.type === 'drum')!
+    const origSynthCount = synthTrack.notes.length
+    const origDrumCount = drumTrack.notes.length
+
+    // Copy from drum track -> paste into synth track is blocked
+    store.getState().setSelectedTrackId(drumTrack.id)
+    store.getState().setSelectedNoteIds([drumTrack.notes[0].id])
+    store.getState().copySelectedNotes()
+    expect(store.getState().clipboardTrackType).toBe('drum')
+
+    store.getState().setSelectedTrackId(synthTrack.id)
+    expect(store.getState().pasteNotes(0)).toBeNull()
+    expect(store.getState().statusMessage).toBe(
+      '異なる種類のノーツはこのトラックにペーストできません'
+    )
+    expect(store.getState().project.tracks.find((t) => t.id === synthTrack.id)!.notes).toHaveLength(
+      origSynthCount
+    )
+
+    // Copy from synth track -> paste into drum track is blocked
+    store.getState().setSelectedNoteIds([synthTrack.notes[0].id])
+    store.getState().copySelectedNotes()
+    expect(store.getState().clipboardTrackType).toBe('synth')
+
+    store.getState().setSelectedTrackId(drumTrack.id)
+    expect(store.getState().pasteNotes(0)).toBeNull()
+    expect(store.getState().statusMessage).toBe(
+      '異なる種類のノーツはこのトラックにペーストできません'
+    )
+    expect(store.getState().project.tracks.find((t) => t.id === drumTrack.id)!.notes).toHaveLength(
+      origDrumCount
+    )
+
+    // Paste into another synth track (same melodic pitch domain) succeeds
+    store.getState().addTrack('synth')
+    const secondSynthId = store.getState().selectedTrackId
+    expect(store.getState().pasteNotes(480)).not.toBeNull()
+    const secondSynth = store.getState().project.tracks.find((t) => t.id === secondSynthId)!
+    expect(secondSynth.notes).toHaveLength(1)
+    expect(secondSynth.notes[0].pitch).toBe(synthTrack.notes[0].pitch)
+    expect(secondSynth.notes[0].startTick).toBe(480)
   })
 })

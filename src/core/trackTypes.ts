@@ -1,7 +1,10 @@
 import { DRUM_LANES, type TrackType } from './types'
 
+export type PitchDomain = 'melodic' | 'drum'
+
 export interface TrackTypeSpec {
   readonly type: TrackType
+  readonly pitchDomain: PitchDomain
   readonly addButtonLabel: string
   readonly defaultNamePrefix: string
   readonly defaultInstrumentId: string
@@ -20,6 +23,7 @@ export interface TrackTypeSpec {
 export const TRACK_TYPE_SPECS: Record<TrackType, TrackTypeSpec> = {
   synth: {
     type: 'synth',
+    pitchDomain: 'melodic',
     addButtonLabel: '+ Synth',
     defaultNamePrefix: 'Synth',
     defaultInstrumentId: 'soft-sine',
@@ -32,6 +36,7 @@ export const TRACK_TYPE_SPECS: Record<TrackType, TrackTypeSpec> = {
   },
   drum: {
     type: 'drum',
+    pitchDomain: 'drum',
     addButtonLabel: '+ Drum',
     defaultNamePrefix: 'Rhythm',
     defaultInstrumentId: 'basic-kit',
@@ -48,4 +53,8 @@ export const TRACK_TYPES: readonly TrackTypeSpec[] = Object.values(TRACK_TYPE_SP
 
 export function getTrackTypeSpec(type: TrackType): TrackTypeSpec {
   return TRACK_TYPE_SPECS[type]
+}
+
+export function canPasteNotesBetween(sourceType: TrackType, targetType: TrackType): boolean {
+  return TRACK_TYPE_SPECS[sourceType].pitchDomain === TRACK_TYPE_SPECS[targetType].pitchDomain
 }

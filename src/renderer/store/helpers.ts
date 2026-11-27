@@ -28,6 +28,7 @@ export type LoadedProjectState = Pick<
   | 'selectedTrackId'
   | 'selectedNoteIds'
   | 'clipboardNotes'
+  | 'clipboardTrackType'
   | 'pianoRollScroll'
   | 'currentFilePath'
   | 'isDirty'
@@ -44,6 +45,7 @@ export function buildLoadedProjectState(
     selectedTrackId: project.tracks[0]?.id ?? '',
     selectedNoteIds: [],
     clipboardNotes: [],
+    clipboardTrackType: null,
     pianoRollScroll: { left: 0, top: null },
     currentFilePath: filePath,
     isDirty: false,

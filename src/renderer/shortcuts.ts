@@ -71,7 +71,7 @@ function transposeSelectedNotes(ctx: ShortcutContext, deltaPitch: number): void 
 
 function isSelectedTrackMelodic(state: ProjectStoreState): boolean {
   const track = state.project.tracks.find((t) => t.id === state.selectedTrackId)
-  return Boolean(track && !getTrackTypeSpec(track.type).usesDrumLanes)
+  return Boolean(track && getTrackTypeSpec(track.type).pitchDomain === 'melodic')
 }
 
 /**
