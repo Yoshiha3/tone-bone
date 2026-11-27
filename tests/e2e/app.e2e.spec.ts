@@ -20,6 +20,8 @@ test.describe('Tone Bone Electron E2E', () => {
         activeThemePackIds: ['minimal-light'],
         activeSoundPackIds: ['default-sounds'],
         noteLengthMode: 'last-used',
+        noteInputMode: 'click',
+        noteDrawKey: 'KeyA',
         saveMode: 'auto'
       })
     )

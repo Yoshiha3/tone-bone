@@ -1,6 +1,13 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs'
 import { dirname, join } from 'path'
-import { DEFAULT_SOUND_PACK_ID, DEFAULT_THEME_PACK_ID, type AppSettings } from '@core/types'
+import {
+  DEFAULT_NOTE_DRAW_KEY,
+  DEFAULT_NOTE_INPUT_MODE,
+  DEFAULT_SOUND_PACK_ID,
+  DEFAULT_THEME_PACK_ID,
+  isValidNoteDrawKey,
+  type AppSettings
+} from '@core/types'
 
 export interface WorkspacePaths {
   root: string
@@ -61,6 +68,8 @@ export class SettingsRepository {
       activeThemePackIds: [DEFAULT_THEME_PACK_ID],
       activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
       noteLengthMode: 'last-used',
+      noteInputMode: DEFAULT_NOTE_INPUT_MODE,
+      noteDrawKey: DEFAULT_NOTE_DRAW_KEY,
       saveMode: 'auto'
     }
     if (!existsSync(this.settingsFilePath)) {
@@ -81,6 +90,13 @@ export class SettingsRepository {
           parsed.noteLengthMode === 'grid-step' || parsed.noteLengthMode === 'last-used'
             ? parsed.noteLengthMode
             : defaults.noteLengthMode,
+        noteInputMode:
+          parsed.noteInputMode === 'click' || parsed.noteInputMode === 'key'
+            ? parsed.noteInputMode
+            : defaults.noteInputMode,
+        noteDrawKey: isValidNoteDrawKey(parsed.noteDrawKey)
+          ? parsed.noteDrawKey
+          : defaults.noteDrawKey,
         saveMode:
           parsed.saveMode === 'auto' || parsed.saveMode === 'manual'
             ? parsed.saveMode

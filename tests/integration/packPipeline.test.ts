@@ -127,6 +127,8 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     expect(initial.activeThemePackIds).toEqual(['minimal-light'])
     expect(initial.activeSoundPackIds).toEqual(['default-sounds'])
     expect(initial.noteLengthMode).toBe('last-used')
+    expect(initial.noteInputMode).toBe('click')
+    expect(initial.noteDrawKey).toBe('KeyA')
     expect(initial.saveMode).toBe('auto')
 
     repo.save({
@@ -134,6 +136,8 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
       activeThemePackIds: ['minimal-dark'],
       activeSoundPackIds: ['default-sounds'],
       noteLengthMode: 'grid-step',
+      noteInputMode: 'key',
+      noteDrawKey: 'KeyD',
       saveMode: 'manual'
     })
     const reloaded = repo.load()
@@ -141,6 +145,21 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     expect(reloaded.activeThemePackIds).toEqual(['minimal-dark'])
     expect(reloaded.activeSoundPackIds).toEqual(['default-sounds'])
     expect(reloaded.noteLengthMode).toBe('grid-step')
+    expect(reloaded.noteInputMode).toBe('key')
+    expect(reloaded.noteDrawKey).toBe('KeyD')
     expect(reloaded.saveMode).toBe('manual')
+
+    // Invalid persisted values fall back to safe defaults
+    writeFileSync(
+      join(userDataDir, 'settings.json'),
+      JSON.stringify({
+        workspaceDir: customWorkspace,
+        noteInputMode: 'invalid',
+        noteDrawKey: 'Space'
+      })
+    )
+    const sanitized = repo.load()
+    expect(sanitized.noteInputMode).toBe('click')
+    expect(sanitized.noteDrawKey).toBe('KeyA')
   })
 })

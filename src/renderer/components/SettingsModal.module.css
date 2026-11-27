@@ -292,3 +292,17 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.keyCaptureBtn {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+
+.keyCaptureBtnActive {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--selection-fill);
+}

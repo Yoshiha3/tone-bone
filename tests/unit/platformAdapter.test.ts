@@ -24,6 +24,8 @@ describe('ElectronPlatformAdapter', () => {
         activeThemePackIds: ['minimal-light'],
         activeSoundPackIds: ['default-sounds'],
         noteLengthMode: 'last-used' as const,
+        noteInputMode: 'click' as const,
+        noteDrawKey: 'KeyA',
         saveMode: 'auto' as const
       })),
       saveSettings: vi.fn(async (s) => s),

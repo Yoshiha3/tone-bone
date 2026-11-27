@@ -1,4 +1,6 @@
 import {
+  DEFAULT_NOTE_DRAW_KEY,
+  DEFAULT_NOTE_INPUT_MODE,
   DEFAULT_SOUND_PACK_ID,
   DEFAULT_THEME_PACK_ID,
   type AppSettings,
@@ -79,6 +81,8 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
       activeThemePackIds: [DEFAULT_THEME_PACK_ID],
       activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
       noteLengthMode: 'last-used',
+      noteInputMode: DEFAULT_NOTE_INPUT_MODE,
+      noteDrawKey: DEFAULT_NOTE_DRAW_KEY,
       saveMode: 'auto'
     }
   ) {

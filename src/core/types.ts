@@ -150,6 +150,19 @@ export type WorkspaceFolderTarget = 'workspace' | 'projects' | 'exports' | 'them
 
 export type NoteLengthMode = 'last-used' | 'grid-step'
 
+export type NoteInputMode = 'click' | 'key'
+
+export const DEFAULT_NOTE_INPUT_MODE: NoteInputMode = 'click'
+export const DEFAULT_NOTE_DRAW_KEY = 'KeyA'
+
+export function isValidNoteDrawKey(code: unknown): code is string {
+  return typeof code === 'string' && /^Key[A-Z]$/.test(code)
+}
+
+export function formatNoteDrawKeyLabel(code: string): string {
+  return isValidNoteDrawKey(code) ? code.slice(3) : DEFAULT_NOTE_DRAW_KEY.slice(3)
+}
+
 export type SaveMode = 'auto' | 'manual'
 
 export interface ProjectSummary {
@@ -167,5 +180,7 @@ export interface AppSettings {
   activeThemePackIds: string[]
   activeSoundPackIds: string[]
   noteLengthMode: NoteLengthMode
+  noteInputMode: NoteInputMode
+  noteDrawKey: string
   saveMode: SaveMode
 }

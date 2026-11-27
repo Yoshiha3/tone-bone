@@ -254,15 +254,21 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
 
     await store.getState().updateSettings({
       noteLengthMode: 'grid-step',
+      noteInputMode: 'key',
+      noteDrawKey: 'KeyF',
       saveMode: 'manual',
       activeThemePackIds: ['minimal-dark']
     })
 
     const savedSettings = await platform.loadSettings()
     expect(store.getState().settings.noteLengthMode).toBe('grid-step')
+    expect(store.getState().settings.noteInputMode).toBe('key')
+    expect(store.getState().settings.noteDrawKey).toBe('KeyF')
     expect(store.getState().settings.saveMode).toBe('manual')
     expect(store.getState().settings.activeThemePackIds).toEqual(['minimal-dark'])
     expect(savedSettings.noteLengthMode).toBe('grid-step')
+    expect(savedSettings.noteInputMode).toBe('key')
+    expect(savedSettings.noteDrawKey).toBe('KeyF')
     expect(savedSettings.saveMode).toBe('manual')
     expect(savedSettings.activeThemePackIds).toEqual(['minimal-dark'])
     expect(appliedBgs).toEqual(['#f6f7f9', '#16191f'])
