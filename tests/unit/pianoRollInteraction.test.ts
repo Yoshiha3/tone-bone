@@ -9,6 +9,7 @@ import {
 import {
   createInteractionSession,
   finishPianoRollDrag,
+  handlePianoRollKeyDrawStart,
   handlePianoRollPointerDown,
   handlePianoRollPointerMove,
   PIANO_ROLL_TOOLS,
@@ -40,6 +41,7 @@ function makeEnv(overrides: Partial<InteractionEnv> = {}): {
     toolMode: 'draw',
     selectedNoteIds: [],
     noteLengthMode: 'last-used',
+    noteInputMode: 'click',
     lastNoteDurationTick: PPQN / 2,
     addNote: vi.fn((_trackId, input) => {
       const created: Note = { ...input, id: `n-${notes.length + 1}` }
@@ -324,5 +326,123 @@ describe('pianoRollInteraction', () => {
       env
     )
     expect(env.previewNote).toHaveBeenCalledTimes(3)
+  })
+
+  it('supports key input mode for note placement and duration drag while blocking blank left-click creation', () => {
+    const session = createInteractionSession()
+    const { env } = makeEnv({
+      noteInputMode: 'key',
+      noteLengthMode: 'last-used',
+      lastNoteDurationTick: 240
+    })
+
+    const startX = KEY_COL_WIDTH + 4
+    const c4Y = pitchToContentY(60, env.metrics) + 5
+
+    // Blank left click does not create a note in key input mode
+    handlePianoRollPointerDown(
+      session,
+      { viewX: startX, viewY: c4Y, contentX: startX, contentY: c4Y },
+      { button: 0, shiftKey: false },
+      env
+    )
+    expect(env.addNote).not.toHaveBeenCalled()
+    expect(session.drag.kind).toBe('none')
+
+    // Key draw outside grid (ruler / keyboard) is ignored
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: 20, viewY: c4Y, contentX: 20, contentY: c4Y },
+        env
+      )
+    ).toBe(false)
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: startX, viewY: 10, contentX: startX, contentY: 10 },
+        env
+      )
+    ).toBe(false)
+
+    // Key draw in blank grid creates note and enters create drag for duration adjustment
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: startX, viewY: c4Y, contentX: startX, contentY: c4Y },
+        env
+      )
+    ).toBe(true)
+    expect(env.addNote).toHaveBeenCalledWith('t-synth', {
+      pitch: 60,
+      startTick: 0,
+      durationTick: 240,
+      velocity: 0.8
+    })
+    expect(session.drag.kind).toBe('create')
+
+    // Moving cursor while holding key stretches note duration, and releasing commits via updateNote
+    const beat1X = KEY_COL_WIDTH + PPQN * env.metrics.pxPerTick
+    handlePianoRollPointerMove(session, { contentX: beat1X, contentY: c4Y }, env)
+    expect(session.previewNotes?.[0].durationTick).toBe(PPQN)
+
+    finishPianoRollDrag(session, env)
+    expect(env.updateNote).toHaveBeenCalledWith('t-synth', 'n-1', { durationTick: PPQN })
+    expect(session.drag.kind).toBe('none')
+
+    // Key draw over an existing note is ignored so it does not stack duplicates
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: startX + 10, viewY: c4Y, contentX: startX + 10, contentY: c4Y },
+        env
+      )
+    ).toBe(false)
+    expect(env.addNote).toHaveBeenCalledTimes(1)
+
+    // Key draw is ignored in click mode and in select tool mode
+    const clickMode = makeEnv({ noteInputMode: 'click' })
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: startX, viewY: c4Y, contentX: startX, contentY: c4Y },
+        clickMode.env
+      )
+    ).toBe(false)
+
+    const selectTool = makeEnv({ noteInputMode: 'key', toolMode: 'select' })
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: startX, viewY: c4Y, contentX: startX, contentY: c4Y },
+        selectTool.env
+      )
+    ).toBe(false)
+
+    // Drum track places single note on key press without entering resize drag
+    const drumHarness = makeEnv({
+      noteInputMode: 'key',
+      track: {
+        id: 't-drum',
+        name: 'Drum',
+        type: 'drum',
+        instrumentId: 'basic-kit',
+        colorIndex: 1,
+        volume: 0.8,
+        muted: false,
+        solo: false,
+        notes: []
+      }
+    })
+    const drumY = RULER_HEIGHT + 10
+    expect(
+      handlePianoRollKeyDrawStart(
+        session,
+        { viewX: KEY_COL_WIDTH + 5, viewY: drumY, contentX: KEY_COL_WIDTH + 5, contentY: drumY },
+        drumHarness.env
+      )
+    ).toBe(true)
+    expect(drumHarness.env.addNote).toHaveBeenCalledTimes(1)
+    expect(session.drag.kind).toBe('none')
   })
 })

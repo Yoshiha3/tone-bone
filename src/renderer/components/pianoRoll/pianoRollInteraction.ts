@@ -6,7 +6,7 @@ import {
   snapTick
 } from '@core/musicMath'
 import { getTrackTypeSpec } from '@core/trackTypes'
-import type { GridDivision, Note, NoteLengthMode, Track } from '@core/types'
+import type { GridDivision, Note, NoteInputMode, NoteLengthMode, Track } from '@core/types'
 import {
   contentXToTick,
   contentYToPitch,
@@ -69,6 +69,7 @@ export interface InteractionEnv {
   toolMode: PianoRollToolMode
   selectedNoteIds: readonly string[]
   noteLengthMode: NoteLengthMode
+  noteInputMode: NoteInputMode
   lastNoteDurationTick: number
   addNote: (trackId: string, note: Omit<Note, 'id'>) => Note
   updateNote: (trackId: string, noteId: string, patch: Partial<Omit<Note, 'id'>>) => void
@@ -87,6 +88,55 @@ export function createInteractionSession(): InteractionSession {
     previewNotes: null,
     marquee: null
   }
+}
+
+function createNoteAt(
+  session: InteractionSession,
+  contentX: number,
+  contentY: number,
+  env: InteractionEnv
+): void {
+  const { track, metrics, gridDivision } = env
+  const trackSpec = getTrackTypeSpec(track.type)
+  const step = getGridTickStep(gridDivision)
+  const startTick = Math.min(
+    metrics.totalTicks - step,
+    floorTickToGrid(contentXToTick(contentX, metrics), gridDivision)
+  )
+  const pitch = contentYToPitch(contentY, metrics)
+  const preferredDuration =
+    trackSpec.remembersLastNoteDuration && env.noteLengthMode === 'last-used'
+      ? env.lastNoteDurationTick
+      : step
+  const durationTick = Math.max(30, Math.min(metrics.totalTicks - startTick, preferredDuration))
+  const created = env.addNote(track.id, { pitch, startTick, durationTick, velocity: 0.8 })
+  env.setSelectedNoteIds([created.id])
+  env.previewNote(track, pitch, 0.18)
+
+  if (trackSpec.supportsNoteResize) {
+    session.drag = {
+      kind: 'create',
+      noteId: created.id,
+      anchorTick: startTick,
+      pitch,
+      startX: contentX,
+      hasDragged: false
+    }
+  }
+}
+
+export function handlePianoRollKeyDrawStart(
+  session: InteractionSession,
+  coords: PointerCoords,
+  env: InteractionEnv
+): boolean {
+  if (env.noteInputMode !== 'key' || env.toolMode !== 'draw') return false
+  if (session.drag.kind !== 'none') return false
+  if (coords.viewX < KEY_COL_WIDTH || coords.viewY < RULER_HEIGHT) return false
+  if (hitTestNote(env.track.notes, coords.contentX, coords.contentY, env.metrics)) return false
+
+  createNoteAt(session, coords.contentX, coords.contentY, env)
+  return true
 }
 
 export function handlePianoRollPointerDown(
@@ -165,31 +215,9 @@ export function handlePianoRollPointerDown(
     return
   }
 
-  const step = getGridTickStep(gridDivision)
-  const startTick = Math.min(
-    metrics.totalTicks - step,
-    floorTickToGrid(contentXToTick(contentX, metrics), gridDivision)
-  )
-  const pitch = contentYToPitch(contentY, metrics)
-  const preferredDuration =
-    trackSpec.remembersLastNoteDuration && env.noteLengthMode === 'last-used'
-      ? env.lastNoteDurationTick
-      : step
-  const durationTick = Math.max(30, Math.min(metrics.totalTicks - startTick, preferredDuration))
-  const created = env.addNote(track.id, { pitch, startTick, durationTick, velocity: 0.8 })
-  env.setSelectedNoteIds([created.id])
-  env.previewNote(track, pitch, 0.18)
+  if (env.noteInputMode !== 'click') return
 
-  if (trackSpec.supportsNoteResize) {
-    session.drag = {
-      kind: 'create',
-      noteId: created.id,
-      anchorTick: startTick,
-      pitch,
-      startX: contentX,
-      hasDragged: false
-    }
-  }
+  createNoteAt(session, contentX, contentY, env)
 }
 
 export function handlePianoRollPointerMove(

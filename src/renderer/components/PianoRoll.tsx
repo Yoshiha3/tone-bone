@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { getTrackTypeSpec, TRACK_TYPE_SPECS } from '@core/trackTypes'
+import { formatNoteDrawKeyLabel } from '@core/types'
 import { audioEngine } from '../audioContext'
 import { formatShortcut } from '../shortcuts'
 import { projectStore, useProjectStore } from '../store/useProjectStore'
@@ -29,6 +30,8 @@ export function PianoRoll() {
   const pxPerBeat = useProjectStore((s) => s.pxPerBeat)
   const setPxPerBeat = useProjectStore((s) => s.setPxPerBeat)
   const noteLengthMode = useProjectStore((s) => s.settings.noteLengthMode)
+  const noteInputMode = useProjectStore((s) => s.settings.noteInputMode)
+  const noteDrawKey = useProjectStore((s) => s.settings.noteDrawKey)
   const lastNoteDurationTick = useProjectStore((s) => s.lastNoteDurationTick)
   const activeThemePackIds = useProjectStore((s) => s.mergedTheme.activeThemePackIds)
   const undo = useProjectStore((s) => s.undo)
@@ -61,6 +64,8 @@ export function PianoRoll() {
     toolMode,
     selectedNoteIds,
     noteLengthMode,
+    noteInputMode,
+    noteDrawKey,
     lastNoteDurationTick
   })
 
@@ -231,6 +236,9 @@ export function PianoRoll() {
             style={{ width: viewport.width, height: viewport.height }}
             className={`${styles.canvas} ${toolMode === 'select' ? styles.canvasSelect : ''}`}
             onMouseDown={interaction.onMouseDown}
+            onMouseEnter={interaction.onMouseMove}
+            onMouseMove={interaction.onMouseMove}
+            onMouseLeave={interaction.onMouseLeave}
             onContextMenu={(e) => e.preventDefault()}
             data-testid="piano-roll-canvas"
           />
@@ -271,9 +279,11 @@ export function PianoRoll() {
         </div>
 
         <span className={styles.hint}>
-          クリック: 配置 / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 /{' '}
-          {formatShortcut('clear-note-selection')}: 選択解除 / {formatShortcut('select-all-notes')}
-          ・{formatShortcut('transpose-up-semitone')}
+          {noteInputMode === 'key'
+            ? `${formatNoteDrawKeyLabel(noteDrawKey)}キー: 配置・長さ調整`
+            : 'クリック: 配置'}{' '}
+          / 右クリック: 削除 / Shift+ドラッグ: 範囲選択 / {formatShortcut('clear-note-selection')}:
+          選択解除 / {formatShortcut('select-all-notes')}・{formatShortcut('transpose-up-semitone')}
           {formatShortcut('transpose-down-semitone')}: 移調 / {formatShortcut('copy-notes')}・
           {formatShortcut('paste-notes')}: コピペ
         </span>
