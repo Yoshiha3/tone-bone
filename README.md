@@ -1,10 +1,10 @@
-# Tone Bone
+# Onkai
 
 **学習コストが低く、見て楽しめる、拡張可能なシンプル DAW ソフト**（Electron + React + TypeScript）
 
-Tone Bone は、直感的なピアノロール打ち込みと静かで美しい再生演出（Stage Mode）、そして **リソースパック方式により、テーマや音源を後からフォルダ追加だけで差し替え・重ね合わせできる拡張設計** を備えたデスクトップ DAW です。
+Onkai は、直感的なピアノロール打ち込みと静かで美しい再生演出（Stage Mode）、そして **リソースパック方式により、テーマや音源を後からフォルダ追加だけで差し替え・重ね合わせできる拡張設計** を備えたデスクトップ DAW です。
 
-![Tone Bone 編集画面](docs/images/tone-bone-demo.png)
+![Onkai 編集画面](docs/images/onkai-demo.png)
 
 ---
 
@@ -25,7 +25,7 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
   - ホーム画面から新規作成・デモ曲追加・名前変更（JSON 内の曲名とファイル名を同時更新）・複製・削除（OS のゴミ箱へ移動）に対応。
   - デフォルトで**自動保存 ON**（編集後の自動保存＋ホーム帰還時の即時保存）。「設定 → エディタ」から手動保存（離脱時に未保存確認）へ切り替え可能です。
   - 1曲1ファイルのシンプルな `.json` 形式で保存し、`OfflineAudioContext` による **16-bit PCM `.wav` 書き出し** に対応。
-  - デフォルトで `~/Documents/ToneBone/`（`projects/`, `exports/`, `themes/`, `sounds/`）を使用。設定画面から任意の場所に変更可能。
+  - デフォルトで `~/Documents/Onkai/`（`projects/`, `exports/`, `themes/`, `sounds/`）を使用。設定画面から任意の場所に変更可能。
 - **テーマパック＆音源パック（分離・重ね合わせ設計）**
   - 見た目（`themes/`：`Minimal Light` / `Minimal Dark` 標準同梱）と音源（`sounds/`：`Default Electronic Kit` 標準同梱）を独立管理。テーマを切り替えても曲の音色に影響しません。
   - 設定画面からトグルスイッチでの ON/OFF、ドラッグ＆ドロップによる優先順位の並べ替えが可能（ビルド不要・即時反映）。標準ベース音源は常に有効で、追加音源パックを上に重ねられます。
@@ -62,28 +62,28 @@ Tone Bone は、直感的なピアノロール打ち込みと静かで美しい�
 
 ## ダウンロード & インストール
 
-[GitHub Releases](https://github.com/Yoshiha3/tone-bone/releases) からお使いの OS 向けバイナリをダウンロードできます。
+[GitHub Releases](https://github.com/Yoshiha3/onkai/releases) からお使いの OS 向けバイナリをダウンロードできます。
 
-| OS                                    | ファイル                                                                             |
-| :------------------------------------ | :----------------------------------------------------------------------------------- |
-| macOS (Apple Silicon)                 | `Tone-Bone-<version>-mac-arm64.dmg`                                                  |
-| macOS (Intel)                         | `Tone-Bone-<version>-mac-x64.dmg`                                                    |
-| Windows (インストーラー / ポータブル) | `Tone-Bone-<version>-win-x64-setup.exe` / `Tone-Bone-<version>-win-x64-portable.exe` |
-| Linux (AppImage)                      | `Tone-Bone-<version>-linux-x64.AppImage`                                             |
+| OS                                    | ファイル                                                                     |
+| :------------------------------------ | :--------------------------------------------------------------------------- |
+| macOS (Apple Silicon)                 | `Onkai-<version>-mac-arm64.dmg`                                              |
+| macOS (Intel)                         | `Onkai-<version>-mac-x64.dmg`                                                |
+| Windows (インストーラー / ポータブル) | `Onkai-<version>-win-x64-setup.exe` / `Onkai-<version>-win-x64-portable.exe` |
+| Linux (AppImage)                      | `Onkai-<version>-linux-x64.AppImage`                                         |
 
 ### 初回起動時の注意（未署名バイナリ）
 
 - **macOS**: Gatekeeper により「開発元が未確認」または「壊れているため開けません」と表示される場合は、`/Applications` にドラッグ＆ドロップした後、ターミナルで以下を実行してから起動してください。
 
   ```bash
-  xattr -cr "/Applications/Tone Bone.app"
+  xattr -cr "/Applications/Onkai.app"
   ```
 - **Windows**: SmartScreen の警告画面が表示された場合は「詳細情報」→「実行」を選択してください。
 - **Linux**: 実行権限を付与して起動してください。
 
   ```bash
-  chmod +x Tone-Bone-*.AppImage
-  ./Tone-Bone-*.AppImage
+  chmod +x Onkai-*.AppImage
+  ./Onkai-*.AppImage
   ```
 
 ---
@@ -152,7 +152,7 @@ npm run icons:generate
 デフォルトの保存先（設定画面「保存先フォルダ」から変更可能）：
 
 ```text
-~/Documents/ToneBone/
+~/Documents/Onkai/
 ├── projects/   # 曲ファイル (<曲名>.json)
 ├── exports/    # 書き出した音声ファイル (<曲名>.wav)
 ├── themes/     # ユーザー自作・追加のテーマパック（見た目・Stage Mode 演出）
