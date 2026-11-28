@@ -81,7 +81,7 @@ jobs:
       - name: Upload built binaries
         uses: actions/upload-artifact@v4
         with:
-          name: tone-bone-${{ matrix.name }}
+          name: onkai-${{ matrix.name }}
           path: |
             dist/*.dmg
             dist/*.exe
@@ -116,16 +116,16 @@ jobs:
           NOTES=$(cat <<'EOF'
           ## ダウンロード
 
-          - **macOS (Apple Silicon / M1–M4)**: `Tone-Bone-*-mac-arm64.dmg`
-          - **macOS (Intel)**: `Tone-Bone-*-mac-x64.dmg`
-          - **Windows (64-bit インストーラー)**: `Tone-Bone-*-win-x64-setup.exe`
-          - **Windows (64-bit ポータブル版)**: `Tone-Bone-*-win-x64-portable.exe`
-          - **Linux (64-bit AppImage)**: `Tone-Bone-*-linux-x64.AppImage`
+          - **macOS (Apple Silicon / M1–M4)**: `Onkai-*-mac-arm64.dmg`
+          - **macOS (Intel)**: `Onkai-*-mac-x64.dmg`
+          - **Windows (64-bit インストーラー)**: `Onkai-*-win-x64-setup.exe`
+          - **Windows (64-bit ポータブル版)**: `Onkai-*-win-x64-portable.exe`
+          - **Linux (64-bit AppImage)**: `Onkai-*-linux-x64.AppImage`
 
           > **初回起動時の注意（未署名バイナリ）**
-          > - **macOS**: 「開発元が未確認」または「壊れているため開けません」と表示される場合は、アプリケーションフォルダへ配置後にターミナルで `xattr -cr "/Applications/Tone Bone.app"` を実行して起動してください。
+          > - **macOS**: 「開発元が未確認」または「壊れているため開けません」と表示される場合は、アプリケーションフォルダへ配置後にターミナルで `xattr -cr "/Applications/Onkai.app"` を実行して起動してください。
           > - **Windows**: SmartScreen の警告が出た場合は「詳細情報」→「実行」を選択してください。
-          > - **Linux**: 実行権限を付与（`chmod +x Tone-Bone-*.AppImage`）して起動してください。
+          > - **Linux**: 実行権限を付与（`chmod +x Onkai-*.AppImage`）して起動してください。
           EOF
           )
 
@@ -134,6 +134,6 @@ jobs:
           else
             gh release create "$TAG" release-assets/* \
               --draft \
-              --title "Tone Bone $TAG" \
+              --title "Onkai $TAG" \
               --notes "$NOTES"
           fi

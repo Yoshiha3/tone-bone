@@ -7,13 +7,13 @@ afterEach(() => {
 })
 
 describe('ElectronPlatformAdapter', () => {
-  it('throws a clear error when window.tonebone preload bridge is unavailable', () => {
+  it('throws a clear error when window.onkai preload bridge is unavailable', () => {
     vi.stubGlobal('window', {})
     const adapter = new ElectronPlatformAdapter()
-    expect(() => adapter.loadSettings()).toThrow('window.tonebone')
+    expect(() => adapter.loadSettings()).toThrow('window.onkai')
   })
 
-  it('delegates all 16 PlatformAdapter methods to window.tonebone', async () => {
+  it('delegates all 16 PlatformAdapter methods to window.onkai', async () => {
     const bridge: PlatformAdapter = {
       saveProjectFile: vi.fn(async () => ({ canceled: false, filePath: '/p.json' })),
       writeProjectFile: vi.fn(async () => ({ canceled: false, filePath: '/p.json' })),
@@ -65,17 +65,17 @@ describe('ElectronPlatformAdapter', () => {
       deleteWorkspaceProject: vi.fn(async () => {})
     }
 
-    vi.stubGlobal('window', { tonebone: bridge })
+    vi.stubGlobal('window', { onkai: bridge })
     const adapter = new ElectronPlatformAdapter()
 
     await adapter.saveProjectFile({
       suggestedName: 'a.json',
       content: '{}',
-      filters: [{ name: 'Tone Bone Project (.json)', extensions: ['json'] }]
+      filters: [{ name: 'Onkai Project (.json)', extensions: ['json'] }]
     })
     await adapter.writeProjectFile('/a.json', '{}')
     await adapter.openProjectFile({
-      filters: [{ name: 'Tone Bone Project (.json)', extensions: ['json'] }]
+      filters: [{ name: 'Onkai Project (.json)', extensions: ['json'] }]
     })
     await adapter.saveExportFile({
       suggestedName: 'a.wav',

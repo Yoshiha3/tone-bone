@@ -26,7 +26,7 @@ describe('Workspace Project Repository (Integration)', () => {
   })
 
   it('creates unique files, lists valid projects newest-first, and skips invalid JSON', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'tonebone-proj-repo-'))
+    const dir = mkdtempSync(join(tmpdir(), 'onkai-proj-repo-'))
     tempDirs.push(dir)
 
     const p1 = createUniqueProjectFile(dir, 'Untitled', codec.encode(createEmptyProject()))
@@ -49,7 +49,7 @@ describe('Workspace Project Repository (Integration)', () => {
   })
 
   it('renames both JSON title and file name, prevents collisions, and handles case-only rename', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'tonebone-proj-rename-'))
+    const dir = mkdtempSync(join(tmpdir(), 'onkai-proj-rename-'))
     tempDirs.push(dir)
 
     const a = createUniqueProjectFile(dir, 'morning', codec.encode(createDemoProject()))
@@ -76,7 +76,7 @@ describe('Workspace Project Repository (Integration)', () => {
   })
 
   it('duplicates projects with unique names and deletes via trash handler or unlink fallback', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'tonebone-proj-dup-del-'))
+    const dir = mkdtempSync(join(tmpdir(), 'onkai-proj-dup-del-'))
     tempDirs.push(dir)
 
     const orig = createUniqueProjectFile(dir, 'Sketch', codec.encode(createDemoProject()))
@@ -101,13 +101,13 @@ describe('Workspace Project Repository (Integration)', () => {
   })
 
   it('supports custom codec extensions for create, list, and rename via CodecRegistry', () => {
-    const dir = mkdtempSync(join(tmpdir(), 'tonebone-proj-custom-ext-'))
+    const dir = mkdtempSync(join(tmpdir(), 'onkai-proj-custom-ext-'))
     tempDirs.push(dir)
 
     const codecs = createDefaultCodecRegistry()
     const tb2Codec: ProjectCodec = {
       id: 'tb2',
-      label: 'Tone Bone v2 (.tb2)',
+      label: 'Onkai v2 (.ok2)',
       extensions: ['tb2'],
       canDecode: (raw) => raw.startsWith('TB2:'),
       encode: (p) => `TB2:${JSON.stringify(p)}`,

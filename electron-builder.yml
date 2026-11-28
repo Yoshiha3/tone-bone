@@ -1,6 +1,6 @@
-appId: com.tonebone.app
-productName: Tone Bone
-copyright: Copyright © 2026 Tone Bone
+appId: com.onkai.app
+productName: Onkai
+copyright: Copyright © 2026 Onkai
 directories:
   buildResources: build
   output: dist
@@ -14,7 +14,7 @@ extraResources:
     to: sounds
   - from: build/icon.png
     to: icon.png
-artifactName: Tone-Bone-${version}-${os}-${arch}.${ext}
+artifactName: Onkai-${version}-${os}-${arch}.${ext}
 mac:
   category: public.app-category.music
   icon: build/icon.icns
@@ -33,12 +33,12 @@ win:
       arch:
         - x64
 nsis:
-  artifactName: Tone-Bone-${version}-${os}-${arch}-setup.${ext}
+  artifactName: Onkai-${version}-${os}-${arch}-setup.${ext}
   oneClick: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
 portable:
-  artifactName: Tone-Bone-${version}-${os}-${arch}-portable.${ext}
+  artifactName: Onkai-${version}-${os}-${arch}-portable.${ext}
 linux:
   icon: build/icon.png
   category: Audio

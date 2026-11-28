@@ -3,4 +3,4 @@ import { createIpcPlatformBridge } from '@platform/ipcContract'
 
 const bridge = createIpcPlatformBridge((channel, ...args) => ipcRenderer.invoke(channel, ...args))
 
-contextBridge.exposeInMainWorld('tonebone', bridge)
+contextBridge.exposeInMainWorld('onkai', bridge)

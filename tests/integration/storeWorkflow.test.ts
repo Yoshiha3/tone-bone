@@ -102,7 +102,7 @@ describe('Store + Codec + Platform + Pack Integration Workflow', () => {
     expect(store.getState().isDirty).toBe(false)
     expect(platform.saveDialogCount).toBe(1)
     expect(platform.directWriteCount).toBe(0)
-    expect(platform.lastSavedProjectPath).toBe('/memory/ToneBone/projects/Evening Flow.json')
+    expect(platform.lastSavedProjectPath).toBe('/memory/Onkai/projects/Evening Flow.json')
     expect(platform.lastSavedProjectContent).toContain('"title": "Evening Flow"')
     expect(platform.lastSavedProjectContent).toContain('"bpm": 128')
 

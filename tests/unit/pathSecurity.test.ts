@@ -22,7 +22,7 @@ describe('Path Security Helpers', () => {
   })
 
   it('detects paths inside a base directory and rejects traversal or symlink escapes', () => {
-    const root = mkdtempSync(join(tmpdir(), 'tonebone-pathsec-'))
+    const root = mkdtempSync(join(tmpdir(), 'onkai-pathsec-'))
     tempDirs.push(root)
     const projectsDir = join(root, 'projects')
     const outsideDir = join(root, 'outside')
@@ -60,7 +60,7 @@ describe('Path Security Helpers', () => {
   })
 
   it('enforces allowed extensions for workspace project paths', () => {
-    const root = mkdtempSync(join(tmpdir(), 'tonebone-extsec-'))
+    const root = mkdtempSync(join(tmpdir(), 'onkai-extsec-'))
     tempDirs.push(root)
     const projectsDir = join(root, 'projects')
     mkdirSync(projectsDir, { recursive: true })
@@ -100,7 +100,7 @@ describe('Path Security Helpers', () => {
     expect(isWorkspaceFolderTarget('other')).toBe(false)
     expect(isWorkspaceFolderTarget('../')).toBe(false)
 
-    const root = mkdtempSync(join(tmpdir(), 'tonebone-approved-'))
+    const root = mkdtempSync(join(tmpdir(), 'onkai-approved-'))
     tempDirs.push(root)
     const externalFile = join(root, 'external.json')
     const newWs = join(root, 'alt-workspace')

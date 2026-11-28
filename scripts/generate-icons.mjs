@@ -37,7 +37,7 @@ const ICONSET_SPECS = [
  * using the installed Electron Chromium engine (zero extra dependencies).
  */
 function renderSvgToPng(svgContent, size, outputPath) {
-  const tempDir = mkdtempSync(join(tmpdir(), 'tonebone-icon-render-'))
+  const tempDir = mkdtempSync(join(tmpdir(), 'onkai-icon-render-'))
   const mainScript = join(tempDir, 'render.cjs')
   const htmlFile = join(tempDir, 'icon.html')
 
@@ -139,7 +139,7 @@ function main() {
   resizePng(MASTER_PNG_PATH, 1024, MASTER_PNG_PATH)
   console.log(`Generated ${MASTER_PNG_PATH}`)
 
-  const workDir = mkdtempSync(join(tmpdir(), 'tonebone-icon-build-'))
+  const workDir = mkdtempSync(join(tmpdir(), 'onkai-icon-build-'))
   try {
     // 2. Build macOS .icns via iconutil
     const iconsetDir = join(workDir, 'icon.iconset')

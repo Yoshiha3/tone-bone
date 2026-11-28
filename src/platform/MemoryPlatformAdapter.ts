@@ -34,7 +34,7 @@ function summarizeMemoryProject(
   try {
     const parsed = JSON.parse(entry.content) as Record<string, unknown>
     if (
-      parsed.format !== 'tone-bone/v1' ||
+      (parsed.format !== 'onkai/v1' && parsed.format !== 'tone-bone/v1') ||
       typeof parsed.title !== 'string' ||
       typeof parsed.bpm !== 'number' ||
       typeof parsed.bars !== 'number' ||
@@ -77,7 +77,7 @@ export class MemoryPlatformAdapter implements PlatformAdapter {
     initialThemePacks: ThemePack[] = [],
     initialSoundPacks: SoundPack[] = [],
     initialSettings: AppSettings = {
-      workspaceDir: '/memory/ToneBone',
+      workspaceDir: '/memory/Onkai',
       activeThemePackIds: [DEFAULT_THEME_PACK_ID],
       activeSoundPackIds: [DEFAULT_SOUND_PACK_ID],
       noteLengthMode: 'last-used',

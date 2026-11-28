@@ -16,16 +16,16 @@ import type {
 
 declare global {
   interface Window {
-    tonebone?: PlatformAdapter
+    onkai?: PlatformAdapter
   }
 }
 
 export class ElectronPlatformAdapter implements PlatformAdapter {
   private get bridge(): PlatformAdapter {
-    if (typeof window === 'undefined' || !window.tonebone) {
-      throw new Error('Electron preload bridge (window.tonebone) is not available')
+    if (typeof window === 'undefined' || !window.onkai) {
+      throw new Error('Electron preload bridge (window.onkai) is not available')
     }
-    return window.tonebone
+    return window.onkai
   }
 
   saveProjectFile(options: SaveProjectFileOptions): Promise<SaveFileResult> {

@@ -3,12 +3,12 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { _electron as electron, expect, test } from '@playwright/test'
 
-const ARTIFACT_DIR = process.env.TONEBONE_SCREENSHOT_DIR || resolve(__dirname, '../../test-results')
+const ARTIFACT_DIR = process.env.ONKAI_SCREENSHOT_DIR || resolve(__dirname, '../../test-results')
 
-test.describe('Tone Bone Electron E2E', () => {
+test.describe('Onkai Electron E2E', () => {
   test('manages projects on Home screen, edits tracks/triplets/notes, switches Stage Mode, and swaps Resource Packs', async () => {
-    const tempUserData = mkdtempSync(join(tmpdir(), 'tonebone-e2e-'))
-    const tempWorkspace = mkdtempSync(join(tmpdir(), 'tonebone-e2e-ws-'))
+    const tempUserData = mkdtempSync(join(tmpdir(), 'onkai-e2e-'))
+    const tempWorkspace = mkdtempSync(join(tmpdir(), 'onkai-e2e-ws-'))
     const appPath = resolve(__dirname, '../..')
 
     // Point settings.json to an isolated temp workspace so user Documents stays untouched

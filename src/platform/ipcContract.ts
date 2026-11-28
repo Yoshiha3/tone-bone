@@ -45,7 +45,7 @@ export function registerTypedIpcHandler<K extends PlatformMethod>(
 }
 
 /**
- * Builds the preload window.tonebone bridge directly from IPC_CHANNELS so adding a new
+ * Builds the preload window.onkai bridge directly from IPC_CHANNELS so adding a new
  * PlatformAdapter method requires zero manual boilerplate in preload.
  */
 export function createIpcPlatformBridge(

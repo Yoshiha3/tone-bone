@@ -35,7 +35,7 @@ describe('applyPackTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#4f8cff')
     expect(document.documentElement.style.getPropertyValue('invalidKey')).toBe('')
 
-    const styleEl = document.getElementById('tonebone-pack-override-css')
+    const styleEl = document.getElementById('onkai-pack-override-css')
     expect(styleEl).not.toBeNull()
     expect(styleEl?.textContent).toBe('.custom { opacity: 0.9; }')
   })
@@ -52,7 +52,7 @@ describe('applyPackTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--new-only')).toBe('#123456')
     expect(document.documentElement.style.getPropertyValue('--old-only')).toBe('')
 
-    const styleEls = document.querySelectorAll('#tonebone-pack-override-css')
+    const styleEls = document.querySelectorAll('#onkai-pack-override-css')
     expect(styleEls).toHaveLength(1)
     expect(styleEls[0].textContent).toBe('.v2 {}')
   })

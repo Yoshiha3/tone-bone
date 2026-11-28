@@ -50,10 +50,10 @@ describe('IPC Contract & Main Handler Registration', () => {
   })
 
   it('registers all IPC_CHANNELS without omission and forwards dialog filters accurately', async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-ipc-test-'))
+    const tempRoot = mkdtempSync(join(tmpdir(), 'onkai-ipc-test-'))
     tempDirs.push(tempRoot)
     const userDataDir = join(tempRoot, 'userData')
-    const workspaceDir = join(tempRoot, 'ToneBone')
+    const workspaceDir = join(tempRoot, 'Onkai')
     const settingsRepo = new SettingsRepository(userDataDir, workspaceDir)
 
     const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
@@ -94,13 +94,13 @@ describe('IPC Contract & Main Handler Registration', () => {
     const saveRes = await saveProjectHandler(null, {
       suggestedName: 'custom.tb2',
       content: 'TB2:{"title":"Custom"}',
-      filters: [{ name: 'Tone Bone v2', extensions: ['tb2'] }]
+      filters: [{ name: 'Onkai v2', extensions: ['tb2'] }]
     })
     expect(saveRes).toEqual({ canceled: false, filePath: savedProjectPath })
     expect(showSaveDialog).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        filters: [{ name: 'Tone Bone v2', extensions: ['tb2'] }]
+        filters: [{ name: 'Onkai v2', extensions: ['tb2'] }]
       })
     )
     expect(readFileSync(savedProjectPath, 'utf-8')).toBe('TB2:{"title":"Custom"}')
@@ -152,10 +152,10 @@ describe('IPC Contract & Main Handler Registration', () => {
   })
 
   it('blocks unauthorized path access while permitting dialog-approved external files and workspaces', async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-ipc-sec-'))
+    const tempRoot = mkdtempSync(join(tmpdir(), 'onkai-ipc-sec-'))
     tempDirs.push(tempRoot)
     const userDataDir = join(tempRoot, 'userData')
-    const workspaceDir = join(tempRoot, 'ToneBone')
+    const workspaceDir = join(tempRoot, 'Onkai')
     const externalDir = join(tempRoot, 'External')
     const externalProjectPath = join(externalDir, 'outside.json')
     const approvedNewWs = join(tempRoot, 'NewWorkspace')

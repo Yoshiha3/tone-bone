@@ -6,7 +6,7 @@ import { PRODUCTION_CSP } from './src/main/security'
 
 function injectProductionCspPlugin(): Plugin {
   return {
-    name: 'tonebone-production-csp',
+    name: 'onkai-production-csp',
     apply: 'build',
     transformIndexHtml() {
       return [

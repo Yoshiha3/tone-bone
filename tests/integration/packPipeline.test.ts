@@ -18,7 +18,7 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
   })
 
   it('loads builtin + user theme/sound packs independently so disabling Minimal Light preserves all sounds', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-pack-test-'))
+    const tempRoot = mkdtempSync(join(tmpdir(), 'onkai-pack-test-'))
     tempDirs.push(tempRoot)
 
     // Create a user custom theme pack in themes/
@@ -94,7 +94,7 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     applyPackTheme(mergedTheme, document)
     expect(document.documentElement.style.getPropertyValue('--bg-app')).toBe('#16191f')
     expect(document.documentElement.style.getPropertyValue('--accent-primary')).toBe('#22aa88')
-    const styleEl = document.getElementById('tonebone-pack-override-css')
+    const styleEl = document.getElementById('onkai-pack-override-css')
     expect(styleEl?.textContent).toContain('letter-spacing: 0.01em')
 
     // Disabling a theme pack removes previously applied custom tokens not present in remaining packs
@@ -109,15 +109,15 @@ describe('Theme & Sound Pack + Settings Pipeline (Integration)', () => {
     applyPackTheme(darkOnly, document)
     expect(document.documentElement.style.getPropertyValue('--custom-ephemeral')).toBe('')
     expect(document.documentElement.style.getPropertyValue('--font-ui')).toBe('')
-    expect(document.getElementById('tonebone-pack-override-css')?.textContent).toBe('')
+    expect(document.getElementById('onkai-pack-override-css')?.textContent).toBe('')
   })
 
   it('persists workspace settings, creates themes/sounds folders, and falls back cleanly on missing defaults', () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), 'tonebone-settings-test-'))
+    const tempRoot = mkdtempSync(join(tmpdir(), 'onkai-settings-test-'))
     tempDirs.push(tempRoot)
 
     const userDataDir = join(tempRoot, 'userData')
-    const defaultWorkspace = join(tempRoot, 'Documents', 'ToneBone')
+    const defaultWorkspace = join(tempRoot, 'Documents', 'Onkai')
     const customWorkspace = join(tempRoot, 'CustomWorkspace')
     mkdirSync(userDataDir, { recursive: true })
 

@@ -1,7 +1,13 @@
 import { MAX_BARS, PPQN, type Note, type Project, type Track } from '@core/types'
 import type { ProjectCodec } from './types'
 
-const FORMAT_ID = 'tone-bone/v1'
+const FORMAT_ID = 'onkai/v1'
+const LEGACY_FORMAT_ID = 'tone-bone/v1'
+const SUPPORTED_FORMAT_IDS: ReadonlySet<string> = new Set([FORMAT_ID, LEGACY_FORMAT_ID])
+
+function isSupportedFormat(format: unknown): boolean {
+  return typeof format === 'string' && SUPPORTED_FORMAT_IDS.has(format)
+}
 
 interface SerializedProjectV1 {
   format: typeof FORMAT_ID
@@ -67,13 +73,13 @@ function validateTrack(raw: unknown, index: number): Track {
 
 export class SimpleJsonV1Codec implements ProjectCodec {
   readonly id = 'simple-json-v1'
-  readonly label = 'Tone Bone Project (.json)'
+  readonly label = 'Onkai Project (.json)'
   readonly extensions = ['json'] as const
 
   canDecode(raw: string): boolean {
     try {
       const parsed: unknown = JSON.parse(raw)
-      return isObject(parsed) && parsed.format === FORMAT_ID
+      return isObject(parsed) && isSupportedFormat(parsed.format)
     } catch {
       return false
     }
@@ -100,7 +106,7 @@ export class SimpleJsonV1Codec implements ProjectCodec {
       throw new Error('Project file is not valid JSON')
     }
 
-    if (!isObject(parsed) || parsed.format !== FORMAT_ID) {
+    if (!isObject(parsed) || !isSupportedFormat(parsed.format)) {
       throw new Error(`Unsupported project format (expected ${FORMAT_ID})`)
     }
     if (

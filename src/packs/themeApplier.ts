@@ -1,6 +1,6 @@
 import type { MergedThemeConfig } from '@core/types'
 
-const OVERRIDE_STYLE_ID = 'tonebone-pack-override-css'
+const OVERRIDE_STYLE_ID = 'onkai-pack-override-css'
 const appliedTokenKeysByDoc = new WeakMap<Document, Set<string>>()
 
 /**

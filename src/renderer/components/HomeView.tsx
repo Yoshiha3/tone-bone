@@ -62,7 +62,7 @@ export function HomeView() {
     <div className={styles.page} data-testid="home-view">
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.brand}>Tone Bone</span>
+          <span className={styles.brand}>Onkai</span>
           <span className={styles.subtitle}>Projects</span>
         </div>
         <div className={styles.headerRight}>
@@ -99,7 +99,7 @@ export function HomeView() {
           <section className={styles.emptyState} data-testid="home-empty-state">
             <h1 className={styles.emptyTitle}>プロジェクトがまだありません</h1>
             <p className={styles.emptyDesc}>
-              新しい曲を作成するか、デモ曲を追加して Tone Bone を始めましょう。
+              新しい曲を作成するか、デモ曲を追加して Onkai を始めましょう。
             </p>
             <div className={styles.emptyActions}>
               <button

@@ -11,12 +11,17 @@ describe('SimpleJsonV1Codec & CodecRegistry', () => {
     const project = createDemoProject()
 
     const encoded = codec.encode(project)
-    expect(encoded).toContain('"format": "tone-bone/v1"')
+    expect(encoded).toContain('"format": "onkai/v1"')
     expect(encoded).toContain('\n  "title": "Simple Sketch"')
     expect(codec.canDecode(encoded)).toBe(true)
 
     const decoded = codec.decode(encoded)
     expect(decoded).toEqual(project)
+
+    // Backward compatibility: legacy tone-bone/v1 files remain readable
+    const legacyRaw = encoded.replace('"format": "onkai/v1"', '"format": "tone-bone/v1"')
+    expect(codec.canDecode(legacyRaw)).toBe(true)
+    expect(codec.decode(legacyRaw)).toEqual(project)
   })
 
   it('rejects malformed or unsupported payloads', () => {
@@ -53,25 +58,25 @@ describe('SimpleJsonV1Codec & CodecRegistry', () => {
     expect(registry.getDefaultExtension()).toBe('json')
     expect(registry.getAllExtensions()).toEqual(['json'])
     expect(registry.getFileFilters()).toEqual([
-      { name: 'Tone Bone Project (.json)', extensions: ['json'] }
+      { name: 'Onkai Project (.json)', extensions: ['json'] }
     ])
 
     const v2: ProjectCodec = {
       id: 'v2',
-      label: 'Tone Bone v2 (.tb2)',
-      extensions: ['.TB2', 'json'],
+      label: 'Onkai v2 (.ok2)',
+      extensions: ['.OK2', 'json'],
       canDecode: () => false,
       encode: () => '',
       decode: () => createDemoProject()
     }
     registry.register(v2, true)
 
-    expect(registry.getDefaultExtension()).toBe('tb2')
-    expect(registry.getAllExtensions()).toEqual(['json', 'tb2'])
+    expect(registry.getDefaultExtension()).toBe('ok2')
+    expect(registry.getAllExtensions()).toEqual(['json', 'ok2'])
     expect(registry.getFileFilters()).toEqual([
-      { name: 'All Supported Projects', extensions: ['json', 'tb2'] },
-      { name: 'Tone Bone Project (.json)', extensions: ['json'] },
-      { name: 'Tone Bone v2 (.tb2)', extensions: ['tb2', 'json'] }
+      { name: 'All Supported Projects', extensions: ['json', 'ok2'] },
+      { name: 'Onkai Project (.json)', extensions: ['json'] },
+      { name: 'Onkai v2 (.ok2)', extensions: ['ok2', 'json'] }
     ])
   })
 })

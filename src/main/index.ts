@@ -37,7 +37,7 @@ function createWindow(): void {
     height: 800,
     minWidth: 960,
     minHeight: 640,
-    title: 'Tone Bone',
+    title: 'Onkai',
     backgroundColor: '#f6f7f9',
     ...(windowIcon ? { icon: windowIcon } : {}),
     webPreferences: {
@@ -64,7 +64,7 @@ function createWindow(): void {
 void app.whenReady().then(() => {
   applySessionSecurity(session.defaultSession)
 
-  const defaultWorkspace = join(app.getPath('documents'), 'ToneBone')
+  const defaultWorkspace = join(app.getPath('documents'), 'Onkai')
   const settingsRepo = new SettingsRepository(app.getPath('userData'), defaultWorkspace)
   settingsRepo.load()
 
