@@ -4,7 +4,9 @@
 
 Onkai は、直感的なピアノロール打ち込みと静かで美しい再生演出（Stage Mode）、そして **リソースパック方式により、テーマや音源を後からフォルダ追加だけで差し替え・重ね合わせできる拡張設計** を備えたデスクトップ DAW です。
 
-![Onkai 編集画面](docs/images/onkai-demo.png)
+![Onkai 編集画面](docs/images/onkai-demo-edit.png)
+
+![Onkai Stage Mode](docs/images/onkai-demo-stage.png)
 
 ---
 
